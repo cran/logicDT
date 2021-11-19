@@ -1,0 +1,24 @@
+Package: logicDT
+Type: Package
+Title: Identifying Interactions Between Binary Predictors
+Version: 1.0.0
+Authors@R: person("Michael", "Lau", email = "michael.lau@hhu.de",
+  role = c("aut", "cre"))
+Description: A global statistical learning method
+  which tries to find the best set of predictors and interactions
+  between predictors for modeling binary or quantitative response data.
+  Several search algorithms and ensembling techniques are implemented
+  allowing for finetuning the method to the specific problem.
+  Interactions with single quantitative covariables can be properly
+  taken into account by also splitting after those or by fitting
+  local four parameter logistic models.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Imports: graphics, stats, utils
+RoxygenNote: 7.1.2
+NeedsCompilation: yes
+Packaged: 2021-11-19 11:54:33 UTC; Michael
+Author: Michael Lau [aut, cre]
+Maintainer: Michael Lau <michael.lau@hhu.de>
+Repository: CRAN
+Date/Publication: 2021-11-19 14:50:02 UTC
