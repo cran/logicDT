@@ -657,7 +657,7 @@ pet_t* fitPETIntern(int* X, int* bin_y, double* quant_y, int y_bin, double* Z, i
   double* train_preds = REAL(train_preds_R);*/
   double* train_preds = (double*) Calloc(N, double);
 
-  stack_t *stack = stack_new();
+  logic_stack_t *stack = stack_new();
 
   node* tree;
   tree = (node*) Calloc(1, node);
@@ -1211,7 +1211,7 @@ double mse_decrease(int N_k, int N_k_L, int N_k_R, double N_k_sum, double N_L_su
   return decr/N_k;
 }
 
-int stack_destroy(stack_t *stack) {
+int stack_destroy(logic_stack_t *stack) {
   if (stack == NULL) {
     return ERR_INVAL;
   }
@@ -1226,7 +1226,7 @@ int stack_destroy(stack_t *stack) {
   return SUCCESS;
 }
 
-int stack_empty(stack_t *stack) {
+int stack_empty(logic_stack_t *stack) {
   if (stack == NULL || stack->top == NULL) {
     return TRUE;
   } else {
@@ -1234,9 +1234,9 @@ int stack_empty(stack_t *stack) {
   }
 }
 
-stack_t *stack_new(void) {
-  /*stack_t *stack = malloc(sizeof(*stack));*/
-  stack_t *stack = (stack_t*) Calloc(1, stack_t);
+logic_stack_t *stack_new(void) {
+  /*logic_stack_t *stack = malloc(sizeof(*stack));*/
+  logic_stack_t *stack = (logic_stack_t*) Calloc(1, logic_stack_t);
   if (stack == NULL) {
     return NULL;
   }
@@ -1244,7 +1244,7 @@ stack_t *stack_new(void) {
   return stack;
 }
 
-void *stack_pop(stack_t *stack) {
+void *stack_pop(logic_stack_t *stack) {
   if (stack == NULL || stack->top == NULL) {
     return NULL;
   }
@@ -1256,7 +1256,7 @@ void *stack_pop(stack_t *stack) {
   return data;
 }
 
-void *queue_pop(stack_t *stack) {
+void *queue_pop(logic_stack_t *stack) {
   if (stack == NULL || stack->top == NULL) {
     return NULL;
   }
@@ -1284,7 +1284,7 @@ void *queue_pop(stack_t *stack) {
   return data;
 }
 
-int stack_push(stack_t *stack, void *data) {
+int stack_push(logic_stack_t *stack, void *data) {
   if (stack == NULL) {
     return ERR_INVAL;
   }
@@ -1389,7 +1389,7 @@ void rebuild_tree(SEXP pet) {
   } else
     tree->func_pred = NULL;
 
-  stack_t *stack = stack_new();
+  logic_stack_t *stack = stack_new();
 
   for(int i = 0; i < number_of_nodes; i++) {
     if(splits[i] != 0) {
@@ -1441,7 +1441,7 @@ linked_list* set_values_and_next(linked_list* l, int split, int split_bin_or_con
 functional** functionalLeaves(node* tree, int number_of_nodes, int* bin_y, double* quant_y, int y_bin, double* Z) {
   node* current_node;
   functional** model_list = (functional**) Calloc(number_of_nodes, functional*);
-  stack_t *stack = stack_new();
+  logic_stack_t *stack = stack_new();
   stack_push(stack, tree);
   int i = 0;
 

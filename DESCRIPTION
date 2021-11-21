@@ -1,7 +1,7 @@
 Package: logicDT
 Type: Package
 Title: Identifying Interactions Between Binary Predictors
-Version: 1.0.0
+Version: 1.0.1
 Authors@R: person("Michael", "Lau", email = "michael.lau@hhu.de",
   role = c("aut", "cre"))
 Description: A global statistical learning method
@@ -17,8 +17,8 @@ Encoding: UTF-8
 Imports: graphics, stats, utils
 RoxygenNote: 7.1.2
 NeedsCompilation: yes
-Packaged: 2021-11-19 11:54:33 UTC; Michael
+Packaged: 2021-11-20 00:11:18 UTC; Michael
 Author: Michael Lau [aut, cre]
 Maintainer: Michael Lau <michael.lau@hhu.de>
 Repository: CRAN
-Date/Publication: 2021-11-19 14:50:02 UTC
+Date/Publication: 2021-11-21 16:10:14 UTC

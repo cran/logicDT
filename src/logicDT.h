@@ -15,7 +15,7 @@
 #define FALSE 0
 #define TRUE 1
 
-typedef struct stack_s stack_t;
+typedef struct logic_stack_s logic_stack_t;
 typedef struct stack_frame_s stack_frame_t;
 typedef struct _functional
 {
@@ -55,7 +55,7 @@ struct stack_frame_s {
   struct stack_frame_s *next;
   void *data;
 };
-struct stack_s {
+struct logic_stack_s {
   struct stack_frame_s *top;
 };
 typedef struct _pet
@@ -93,12 +93,12 @@ typedef struct _y_Z_pair
   double Z;
 } y_Z_pair_t;
 
-int stack_destroy(stack_t *stack);
-int stack_empty(stack_t *stack);
-stack_t *stack_new(void);
-void *stack_pop(stack_t *stack);
-void *queue_pop(stack_t *stack);
-int stack_push(stack_t *stack, void *data);
+int stack_destroy(logic_stack_t *stack);
+int stack_empty(logic_stack_t *stack);
+logic_stack_t *stack_new(void);
+void *stack_pop(logic_stack_t *stack);
+void *queue_pop(logic_stack_t *stack);
+int stack_push(logic_stack_t *stack, void *data);
 
 /*void split_node(node* knot, int split);*/
 double calcLeafProb(int N_k_1, int N_k, int smoothing);

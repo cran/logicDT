@@ -1,4 +1,4 @@
-ab201beae09b79bab23f04582a9f2031 *DESCRIPTION
+7fa0fbfaf05698a8061109a5be910b6e *DESCRIPTION
 ef2b249f631f940fa8e817101d43ceb0 *LICENSE
 264f6538d714bd4b569e29ab8033f468 *NAMESPACE
 7f37785e53ed950ded68a9988ef2838b *R/cooling.schedule.R
@@ -15,7 +15,7 @@ db501f60d87d7850036caa8e69d05471 *R/simulateGRS.R
 64b352f9c03cd528858a5536cec533aa *R/utils.R
 dca9b583196fad6b915dff9a32de4735 *R/vim.R
 35ec1359fbac07fc26b6ba0f20fd8c5a *README.md
-6ba96e7dad9d58baae204a0d154ceab4 *build/partial.rdb
+650197fd74e36f1f007efffcc8ac4569 *build/partial.rdb
 3d8db2d1d4b24980033101dd5fa4c657 *man/calcAUC.Rd
 a6ed711462b1bbec95b14cffc942e156 *man/calcBrier.Rd
 c7bc964feb7f0c56b8b26ef57aedec97 *man/calcDev.Rd
@@ -38,7 +38,7 @@ b76a62a943cc9cc3fffb303f77d7af1d *man/predict.4pl.Rd
 3a0c1d947e0d4bba8a83157ab003af7b *man/tree.control.Rd
 ad76028f1c81428f4458bdad91550f8f *man/vim.Rd
 5293cc42d34e45b06b87408ab5618e47 *src/logicDT-init.c
-a8579c4cbb8650e85af3630f14662cbe *src/logicDT.c
-581fc59b654d8eb3468789b285f9db38 *src/logicDT.h
+56a909be5463b338e209be791d4c45ed *src/logicDT.c
+35e8d2ce542bf0363b759835604c6ada *src/logicDT.h
 8549864b18def1ff1798c8688fc38da7 *src/sa-greedy.c
 1301401f528ba97ade6a886b14cb75e7 *src/sa-greedy.h
