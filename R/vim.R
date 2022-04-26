@@ -97,9 +97,10 @@ vim_adjusted <- function(model, scoring_rule, vim_type, interaction_order, nodes
         # Way faster:
         stacked <- matrix(rep(combs[j,], N), byrow = TRUE, nrow = N)
         comb.rows <- unname(rowMeans(dm.tmp == stacked)) == 1
+        N.comb <- sum(comb.rows)
+        if(N.comb < nodesize || N - N.comb < nodesize) next
         if(model$y_bin) {
           y.comb.sum <- sum(y[comb.rows])
-          N.comb <- sum(comb.rows)
           # p.values[j] <- stats::prop.test(c(y.comb.sum, y.sum - y.comb.sum), c(N.comb, N - N.comb),
           #                                 alternative = "two.sided", correct = FALSE)$p.value
           # Fisher's exact test (allowing for small sample sizes/expected values < 5):
@@ -245,8 +246,8 @@ perf.remove <- function(model, scoring_rule, rem.vars,
     }
   }
   ensemble <- fitPETs(model$X_train, model$y_train, model$X_val, model$y_val, model$Z_train, model$Z_val, model$use_validation, model$y_bin,
-                      model$tree_control$nodesize, model$tree_control$cp, model$tree_control$smoothing, model$tree_control$mtry, model$tree_control$covariable_final,
-                      disj, n_conj, getScoreRule(scoring_rule), TRUE)
+                      model$tree_control$nodesize, model$tree_control$split_criterion, model$tree_control$alpha, model$tree_control$cp, model$tree_control$smoothing, model$tree_control$mtry, model$tree_control$covariable_final,
+                      disj, n_conj, getScoreRule(scoring_rule), model$gamma, TRUE)
   score <- 0
   for(j in 1:n_folds) {
     Z_temp <- NULL

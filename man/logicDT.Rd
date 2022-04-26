@@ -16,6 +16,7 @@
   cooling_schedule = cooling.schedule(),
   scoring_rule = "auc",
   tree_control = tree.control(),
+  gamma = 0,
   simplify = "vars",
   val_method = "none",
   val_frac = 0.5,
@@ -63,13 +64,23 @@ the function \code{\link{cooling.schedule}}.}
 \item{scoring_rule}{Scoring rule for guiding the global search.
 This can either be "auc" for the area under the receiver
 operating characteristic curve (default for binary reponses),
-"deviance" for the deviance or "brier" for the Brier score.
+"deviance" for the deviance, "nce" for the normalized cross entropy
+or "brier" for the Brier score.
 For regression purposes, the MSE (mean squared error) is
 automatically chosen.}
 
 \item{tree_control}{Parameters controlling the fitting of
 decision trees. This should be configured via the
 function \code{\link{tree.control}}.}
+
+\item{gamma}{Complexity penalty added to the score.
+If \eqn{\texttt{gamma} > 0} is given, \eqn{\texttt{gamma} \cdot ||m||_0}
+is added to the score with \eqn{||m||_0} being the total number of
+variables contained in the current model \eqn{m}.
+The main purpose of this penalty is for fitting logicDT stumps
+in conjunction with boosting. For regular logicDT models or bagged
+logicDT models, instead, the model complexity parameters \code{max_vars}
+and \code{max_conj} should be tuned.}
 
 \item{simplify}{Should the final fitted model be simplified?
 This means, that unnecessary terms as a whole ("conj") will

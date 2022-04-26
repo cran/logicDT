@@ -10,13 +10,15 @@
 #' @useDynLib logicDT greedySearch_
 #' @useDynLib logicDT calcAUC_
 #' @useDynLib logicDT fit4plModel_
+#' @useDynLib logicDT fit4plModelWithGroups_
+#' @useDynLib logicDT fitLinearModel_
 
-fitPETs <- function(X_train, y_train, X_val, y_val, Z_train, Z_val, use_validation, y_bin, nodesize, cp, smoothing, mtry, covariable_mode, disj, real_n_conj, scoring_rule, return_full_model = FALSE) {
-  return(.Call(fitPETs_, X_train, y_train, X_val, y_val, Z_train, Z_val, use_validation, y_bin, nodesize, cp, smoothing, mtry, covariable_mode, disj, real_n_conj, as.integer(scoring_rule), return_full_model))
+fitPETs <- function(X_train, y_train, X_val, y_val, Z_train, Z_val, use_validation, y_bin, nodesize, split_criterion, alpha, cp, smoothing, mtry, covariable_mode, disj, real_n_conj, scoring_rule, gamma, return_full_model = FALSE) {
+  return(.Call(fitPETs_, X_train, y_train, X_val, y_val, Z_train, Z_val, use_validation, y_bin, nodesize, split_criterion, alpha, cp, smoothing, mtry, covariable_mode, disj, real_n_conj, as.integer(scoring_rule), gamma, return_full_model))
 }
 
-fitPET <- function(X, y, Z = NULL, nodesize, cp, smoothing, mtry, covariable_mode) {
-  pet <- .Call(fitPET_, X, y, Z, nodesize, cp, smoothing, mtry, covariable_mode)
+fitPET <- function(X, y, Z = NULL, nodesize, split_criterion, alpha, cp, smoothing, mtry, covariable_mode) {
+  pet <- .Call(fitPET_, X, y, Z, nodesize, split_criterion, alpha, cp, smoothing, mtry, covariable_mode)
   return(pet)
 }
 
@@ -114,12 +116,21 @@ logicDT <- function(X, ...) UseMethod("logicDT")
 #' @param scoring_rule Scoring rule for guiding the global search.
 #'   This can either be "auc" for the area under the receiver
 #'   operating characteristic curve (default for binary reponses),
-#'   "deviance" for the deviance or "brier" for the Brier score.
+#'   "deviance" for the deviance, "nce" for the normalized cross entropy
+#'   or "brier" for the Brier score.
 #'   For regression purposes, the MSE (mean squared error) is
 #'   automatically chosen.
 #' @param tree_control Parameters controlling the fitting of
 #'   decision trees. This should be configured via the
 #'   function \code{\link{tree.control}}.
+#' @param gamma Complexity penalty added to the score.
+#'   If \eqn{\texttt{gamma} > 0} is given, \eqn{\texttt{gamma} \cdot ||m||_0}
+#'   is added to the score with \eqn{||m||_0} being the total number of
+#'   variables contained in the current model \eqn{m}.
+#'   The main purpose of this penalty is for fitting logicDT stumps
+#'   in conjunction with boosting. For regular logicDT models or bagged
+#'   logicDT models, instead, the model complexity parameters \code{max_vars}
+#'   and \code{max_conj} should be tuned.
 #' @param simplify Should the final fitted model be simplified?
 #'   This means, that unnecessary terms as a whole ("conj") will
 #'   be removed if they cannot improve the score.
@@ -215,6 +226,7 @@ logicDT.default <- function(X, y, max_vars = 3, max_conj = 3, Z = NULL,
                             search_algo = "sa",
                             cooling_schedule = cooling.schedule(),
                             scoring_rule = "auc", tree_control = tree.control(),
+                            gamma = 0,
                             simplify = "vars",
                             val_method = "none", val_frac = 0.5, val_reps = 10,
                             allow_conj_removal = TRUE, conjsize = 1,
@@ -355,7 +367,7 @@ logicDT.default <- function(X, y, max_vars = 3, max_conj = 3, Z = NULL,
     min_score <- 1e35
   } else {
     disj[,1] <- sample(p, max_conj, replace = FALSE)
-    min_score <- buildModel(X_train, y_train, Z_train, Z_val, disj, list(), tree_control, scoring_rule,
+    min_score <- buildModel(X_train, y_train, Z_train, Z_val, disj, list(), tree_control, scoring_rule, gamma,
                             X_val, y_val, use_validation, y_bin)$new_score
   }
 
@@ -370,7 +382,7 @@ logicDT.default <- function(X, y, max_vars = 3, max_conj = 3, Z = NULL,
 
   if(search_algo == "greedy") {
     eval <- .Call(greedySearch_, X_train, y_train, max_vars, max_conj, Z_train, Z_val, disj, score, randomize_greedy, greedy_mod, greedy_rem,
-                  tree_control$nodesize, tree_control$cp, tree_control$smoothing, tree_control$mtry, tree_control$covariable_search, score_rule,
+                  tree_control$nodesize, tree_control$split_criterion, tree_control$alpha, tree_control$cp, tree_control$smoothing, tree_control$mtry, tree_control$covariable_search, score_rule, gamma,
                   X_val, y_val, use_validation, y_bin, allow_conj_removal, conjsize, X)
     min_conj <- eval[[1]]
     min_score <- eval[[2]]
@@ -392,7 +404,7 @@ logicDT.default <- function(X, y, max_vars = 3, max_conj = 3, Z = NULL,
       disj_buffer <- disj
       score_buffer <- Inf
       for(i in 1:cs$start_temp_steps) {
-        eval <- simulatedAnnealingStep(X_train, y_train, max_vars, max_conj, Z_train, Z_val, disj_buffer, Inf, 0, evaluated_models, tree_control, scoring_rule, X_val, y_val, use_validation, y_bin, allow_conj_removal, conjsize, X)
+        eval <- simulatedAnnealingStep(X_train, y_train, max_vars, max_conj, Z_train, Z_val, disj_buffer, Inf, 0, evaluated_models, tree_control, scoring_rule, gamma, X_val, y_val, use_validation, y_bin, allow_conj_removal, conjsize, X)
         disj_buffer <- eval$disj
 
         if(eval$score > score_buffer) {
@@ -417,7 +429,7 @@ logicDT.default <- function(X, y, max_vars = 3, max_conj = 3, Z = NULL,
     frozen <- 0
 
     eval <- .Call(simulatedAnnealing_, X_train, y_train, max_vars, max_conj, Z_train, Z_val, disj, t, score,
-                  tree_control$nodesize, tree_control$cp, tree_control$smoothing, tree_control$mtry, tree_control$covariable_search, score_rule,
+                  tree_control$nodesize, tree_control$split_criterion, tree_control$alpha, tree_control$cp, tree_control$smoothing, tree_control$mtry, tree_control$covariable_search, score_rule, gamma,
                   X_val, y_val, use_validation, y_bin, allow_conj_removal, conjsize, X, cs)
     min_conj <- eval[[1]]
     min_score <- eval[[2]]
@@ -426,8 +438,8 @@ logicDT.default <- function(X, y, max_vars = 3, max_conj = 3, Z = NULL,
   } else if (search_algo == "genetic") {
     eval <- .Call(geneticProgramming_, X_train, y_train, max_vars, max_conj,
                   as.integer(max_gen), as.numeric(gp_sigma), as.integer(gp_fs_interval),
-                  Z_train, Z_val, tree_control$nodesize, tree_control$cp,
-                  tree_control$smoothing, tree_control$mtry, tree_control$covariable_search, score_rule, X_val, y_val, use_validation, y_bin,
+                  Z_train, Z_val, tree_control$nodesize, tree_control$split_criterion, tree_control$alpha, tree_control$cp,
+                  tree_control$smoothing, tree_control$mtry, tree_control$covariable_search, score_rule, gamma, X_val, y_val, use_validation, y_bin,
                   allow_conj_removal, conjsize, X)
 
     min_conj <- eval[[1]]
@@ -439,7 +451,7 @@ logicDT.default <- function(X, y, max_vars = 3, max_conj = 3, Z = NULL,
 
   model <- list(disj = min_conj, score = min_score, evaluated_models = evaluated_models,
                 X_train = X_train, y_train = y_train, Z_train = Z_train, Z_val = Z_val,
-                tree_control = tree_control, scoring_rule = scoring_rule, val_method = val_method,
+                tree_control = tree_control, scoring_rule = scoring_rule, gamma = gamma, val_method = val_method,
                 X_val = X_val, y_val = y_val, use_validation = use_validation, y_bin = y_bin, X = X, y = y, Z = Z,
                 total_iter = total_iter, prevented_evals = prevented_evals, conjsize = conjsize)
   class(model) <- "logicDT"
@@ -469,8 +481,8 @@ logicDT.default <- function(X, y, max_vars = 3, max_conj = 3, Z = NULL,
       model$real_disj[[i]] <- translateLogicPET(model$disj[[i]], X)
 
       ensemble <- fitPETs(X_train, y_train, X_val, y_val, Z_train, Z_val, use_validation, y_bin,
-                          tree_control$nodesize, tree_control$cp, tree_control$smoothing, tree_control$mtry, tree_control$covariable_final,
-                          model$disj[[i]], sum(rowSums(!is.na(model$disj[[i]])) > 0), score_rule, TRUE)
+                          tree_control$nodesize, tree_control$split_criterion, tree_control$alpha, tree_control$cp, tree_control$smoothing, tree_control$mtry, tree_control$covariable_final,
+                          model$disj[[i]], sum(rowSums(!is.na(model$disj[[i]])) > 0), score_rule, gamma, TRUE)
       model$ensemble[[i]] <- ensemble
     }
     return(model)
@@ -488,10 +500,10 @@ logicDT.default <- function(X, y, max_vars = 3, max_conj = 3, Z = NULL,
   model$real_disj <- translateLogicPET(model$disj, X)
 
   X2 <- getDesignMatrix(X, model$disj)
-  pet <- fitPET(X2, y, Z, tree_control$nodesize, tree_control$cp, tree_control$smoothing, tree_control$mtry, tree_control$covariable_final)
+  pet <- fitPET(X2, y, Z, tree_control$nodesize, tree_control$split_criterion, tree_control$alpha, tree_control$cp, tree_control$smoothing, tree_control$mtry, tree_control$covariable_final)
   ensemble <- fitPETs(X_train, y_train, X_val, y_val, Z_train, Z_val, use_validation, y_bin,
-                      tree_control$nodesize, tree_control$cp, tree_control$smoothing, tree_control$mtry, tree_control$covariable_final,
-                      model$disj, sum(rowSums(!is.na(model$disj)) > 0), score_rule, TRUE)
+                      tree_control$nodesize, tree_control$split_criterion, tree_control$alpha, tree_control$cp, tree_control$smoothing, tree_control$mtry, tree_control$covariable_final,
+                      model$disj, sum(rowSums(!is.na(model$disj)) > 0), score_rule, gamma, TRUE)
   model$pet <- pet
   model$ensemble <- ensemble
 
@@ -524,7 +536,7 @@ logicDT.formula <- function(formula, data, ...) {
   logicDT(X, y, Z = Z, ...)
 }
 
-greedyStep <- function(X_train, y_train, max_vars, max_conj, disj, min_score, evaluated_models, tree_control, scoring_rule,
+greedyStep <- function(X_train, y_train, max_vars, max_conj, disj, min_score, evaluated_models, tree_control, scoring_rule, gamma,
                        X_val, y_val, use_validation, allow_conj_removal, conjsize, X) {
   p <- ncol(X_train[[1]])
   min_conj <- disj
@@ -538,7 +550,7 @@ greedyStep <- function(X_train, y_train, max_vars, max_conj, disj, min_score, ev
     for(j in 1:p) {
       disj2 <- disj
       disj2[n_conj + 1, 1] <- j
-      score_and_models <- buildModel(X_train, y_train, disj2, evaluated_models, tree_control, scoring_rule, X_val, y_val, use_validation)
+      score_and_models <- buildModel(X_train, y_train, disj2, evaluated_models, tree_control, scoring_rule, gamma, X_val, y_val, use_validation)
       if(score_and_models$new_score < min_score) {
         min_score <- score_and_models$new_score
         min_conj <- disj2
@@ -552,7 +564,7 @@ greedyStep <- function(X_train, y_train, max_vars, max_conj, disj, min_score, ev
       disj2 <- disj
       disj2[j,] <- disj2[n_conj,]
       disj2[n_conj,] <- NA
-      score_and_models <- buildModel(X_train, y_train, disj2, evaluated_models, tree_control, scoring_rule, X_val, y_val, use_validation)
+      score_and_models <- buildModel(X_train, y_train, disj2, evaluated_models, tree_control, scoring_rule, gamma, X_val, y_val, use_validation)
       if(score_and_models$new_score < min_score) {
         min_score <- score_and_models$new_score
         min_conj <- disj2
@@ -579,7 +591,7 @@ greedyStep <- function(X_train, y_train, max_vars, max_conj, disj, min_score, ev
           next
         }
 
-        score_and_models <- buildModel(X_train, y_train, disj2, evaluated_models, tree_control, scoring_rule, X_val, y_val, use_validation)
+        score_and_models <- buildModel(X_train, y_train, disj2, evaluated_models, tree_control, scoring_rule, gamma, X_val, y_val, use_validation)
         if(score_and_models$new_score < min_score) {
           min_score <- score_and_models$new_score
           min_conj <- disj2
@@ -593,7 +605,7 @@ greedyStep <- function(X_train, y_train, max_vars, max_conj, disj, min_score, ev
         disj2 <- disj
         disj2[i, j] <- disj2[i, n_vars_here]
         disj2[i, n_vars_here] <- NA
-        score_and_models <- buildModel(X_train, y_train, disj2, evaluated_models, tree_control, scoring_rule, X_val, y_val, use_validation)
+        score_and_models <- buildModel(X_train, y_train, disj2, evaluated_models, tree_control, scoring_rule, gamma, X_val, y_val, use_validation)
         if(score_and_models$new_score < min_score) {
           min_score <- score_and_models$new_score
           min_conj <- disj2
@@ -614,7 +626,7 @@ greedyStep <- function(X_train, y_train, max_vars, max_conj, disj, min_score, ev
           next
         }
 
-        score_and_models <- buildModel(X_train, y_train, disj2, evaluated_models, tree_control, scoring_rule, X_val, y_val, use_validation)
+        score_and_models <- buildModel(X_train, y_train, disj2, evaluated_models, tree_control, scoring_rule, gamma, X_val, y_val, use_validation)
         if(score_and_models$new_score < min_score) {
           min_score <- score_and_models$new_score
           min_conj <- disj2
@@ -627,7 +639,7 @@ greedyStep <- function(X_train, y_train, max_vars, max_conj, disj, min_score, ev
   return(ret)
 }
 
-simulatedAnnealingStep <- function(X_train, y_train, max_vars, max_conj, Z_train, Z_val, disj, t, score, evaluated_models, tree_control, scoring_rule,
+simulatedAnnealingStep <- function(X_train, y_train, max_vars, max_conj, Z_train, Z_val, disj, t, score, evaluated_models, tree_control, scoring_rule, gamma,
                                    X_val, y_val, use_validation, y_bin, allow_conj_removal, conjsize, X) {
   p <- ncol(X_train[[1]])
   disj2 <- disj
@@ -687,7 +699,7 @@ simulatedAnnealingStep <- function(X_train, y_train, max_vars, max_conj, Z_train
       start2 <- Sys.time()
       conjsum <- sum(getDesignMatrix(X, disj2[which_conj,,drop=FALSE]))
       if (conjsum < conjsize | conjsum > nrow(X) - conjsize) {
-        return(simulatedAnnealingStep(X_train, y_train, max_vars, max_conj, Z_train, Z_val, disj, t, score, evaluated_models, tree_control, scoring_rule,
+        return(simulatedAnnealingStep(X_train, y_train, max_vars, max_conj, Z_train, Z_val, disj, t, score, evaluated_models, tree_control, scoring_rule, gamma,
                                       X_val, y_val, use_validation, y_bin, allow_conj_removal, conjsize, X))
       }
     }
@@ -702,13 +714,13 @@ simulatedAnnealingStep <- function(X_train, y_train, max_vars, max_conj, Z_train
     disj2[n_conj,] <- NA
   }
 
-  return(evaluateModel(X_train, y_train, Z_train, Z_val, t, disj, disj2, score, evaluated_models, tree_control, scoring_rule, X_val, y_val, use_validation, y_bin))
+  return(evaluateModel(X_train, y_train, Z_train, Z_val, t, disj, disj2, score, evaluated_models, tree_control, scoring_rule, gamma, X_val, y_val, use_validation, y_bin))
 }
 
 #' @importFrom stats runif
-evaluateModel <- function(X_train, y_train, Z_train, Z_val, t, disj, disj2, old_score, evaluated_models, tree_control, scoring_rule,
+evaluateModel <- function(X_train, y_train, Z_train, Z_val, t, disj, disj2, old_score, evaluated_models, tree_control, scoring_rule, gamma,
                           X_val, y_val, use_validation, y_bin) {
-  score_and_models <- buildModel(X_train, y_train, Z_train, Z_val, disj2, evaluated_models, tree_control, scoring_rule, X_val, y_val, use_validation, y_bin)
+  score_and_models <- buildModel(X_train, y_train, Z_train, Z_val, disj2, evaluated_models, tree_control, scoring_rule, gamma, X_val, y_val, use_validation, y_bin)
   new_score <- score_and_models$new_score
   evaluated_models <- score_and_models$evaluated_models
   disj2 <- score_and_models$disj2
@@ -727,12 +739,12 @@ evaluateModel <- function(X_train, y_train, Z_train, Z_val, t, disj, disj2, old_
   }
 }
 
-buildModel <- function(X_train, y_train, Z_train, Z_val, disj2, evaluated_models, tree_control, scoring_rule,
+buildModel <- function(X_train, y_train, Z_train, Z_val, disj2, evaluated_models, tree_control, scoring_rule, gamma,
                        X_val, y_val, use_validation, y_bin, submodel = "tree") {
   score_rule <- getScoreRule(scoring_rule)
   new_score <- fitPETs(X_train, y_train, X_val, y_val, Z_train, Z_val, use_validation, y_bin,
-                       tree_control$nodesize, tree_control$cp, tree_control$smoothing, tree_control$mtry, tree_control$covariable_search,
-                       disj2, sum(rowSums(!is.na(disj2)) > 0), score_rule)
+                       tree_control$nodesize, tree_control$split_criterion, tree_control$alpha, tree_control$cp, tree_control$smoothing, tree_control$mtry, tree_control$covariable_search,
+                       disj2, sum(rowSums(!is.na(disj2)) > 0), score_rule, gamma)
 
   return(list(new_score = new_score, disj2 = disj2, evaluated_models = evaluated_models))
 }
@@ -777,6 +789,18 @@ decodeModel <- function(code) {
   return(sortMatrix(disj))
 }
 
+#' Design matrix for the set of conjunctions
+#'
+#' Transform the original predictor matrix X into the conjunction design matrix
+#' which contains for each conjunction a corresponding column.
+#'
+#' @param X The original (binary) predictor matrix. This has to be of type
+#'   integer.
+#' @param disj The conjunction matrix which can, e.g., be extracted from a
+#'   fitted \code{logicDT} model via $disj.
+#' @return The transformed design matrix.
+#'
+#' @export
 getDesignMatrix <- function(X, disj) {
   dm <- .Call(getDesignMatrix_, X, disj, sum(rowSums(!is.na(disj)) > 0))
   return(dm)
@@ -791,6 +815,7 @@ simplifyDisjunctions <- function(model) {
   evaluated_models <- model$evaluated_models
   tree_control <- model$tree_control
   scoring_rule <- model$scoring_rule
+  gamma <- model$gamma
   X_val <- model$X_val
   y_val <- model$y_val
   use_validation <- model$use_validation
@@ -806,7 +831,7 @@ simplifyDisjunctions <- function(model) {
     disj2 <- disj
     disj2[j,] <- disj2[n_conj,]
     disj2[n_conj,] <- NA
-    score_and_models <- buildModel(X_train, y_train, Z_train, Z_val, disj2, evaluated_models, tree_control, scoring_rule,
+    score_and_models <- buildModel(X_train, y_train, Z_train, Z_val, disj2, evaluated_models, tree_control, scoring_rule, gamma,
                                    X_val, y_val, use_validation, y_bin)
     if(score_and_models$new_score <= score) {
       model$disj <- disj2
@@ -830,6 +855,7 @@ simplifyConjunctions <- function(model) {
   evaluated_models <- model$evaluated_models
   tree_control <- model$tree_control
   scoring_rule <- model$scoring_rule
+  gamma <- model$gamma
   X_val <- model$X_val
   y_val <- model$y_val
   use_validation <- model$use_validation
@@ -844,7 +870,7 @@ simplifyConjunctions <- function(model) {
     min_n_vars <- current_n_vars
 
     results <- simplifyConjunction(disj, i, current_n_vars, score, list(),
-                                   X_train, y_train, Z_train, Z_val, evaluated_models, tree_control, scoring_rule,
+                                   X_train, y_train, Z_train, Z_val, evaluated_models, tree_control, scoring_rule, gamma,
                                    X_val, y_val, use_validation, y_bin)
     evaluated_models <- results$evaluated_models
     variations <- results$variations
@@ -866,7 +892,7 @@ simplifyConjunctions <- function(model) {
 }
 
 simplifyConjunction <- function(disj, disj_ind, current_n_vars, score, variations,
-                                X_train, y_train, Z_train, Z_val, evaluated_models, tree_control, scoring_rule,
+                                X_train, y_train, Z_train, Z_val, evaluated_models, tree_control, scoring_rule, gamma,
                                 X_val, y_val, use_validation, y_bin) {
   if (current_n_vars < 2) {
     return(list(variations = variations, evaluated_models = evaluated_models))
@@ -877,7 +903,7 @@ simplifyConjunction <- function(disj, disj_ind, current_n_vars, score, variation
     disj2[disj_ind, j] <- disj2[disj_ind, current_n_vars]
     disj2[disj_ind, current_n_vars] <- NA
 
-    score_and_models <- buildModel(X_train, y_train, Z_train, Z_val, disj2, evaluated_models, tree_control, scoring_rule,
+    score_and_models <- buildModel(X_train, y_train, Z_train, Z_val, disj2, evaluated_models, tree_control, scoring_rule, gamma,
                                    X_val, y_val, use_validation, y_bin)
     evaluated_models <- score_and_models$evaluated_models
     new_score <- score_and_models$new_score
@@ -885,7 +911,7 @@ simplifyConjunction <- function(disj, disj_ind, current_n_vars, score, variation
     if (new_score <= score) {
       variations[[paste(disj2[disj_ind, 1:(current_n_vars - 1)], collapse = "^")]] <- current_n_vars - 1
       rec <- simplifyConjunction(disj2, disj_ind, current_n_vars - 1, score, variations,
-                                 X_train, y_train, Z_train, Z_val, evaluated_models, tree_control, scoring_rule,
+                                 X_train, y_train, Z_train, Z_val, evaluated_models, tree_control, scoring_rule, gamma,
                                  X_val, y_val, use_validation, y_bin)
       variations <- rec$variations
       evaluated_models <- rec$evaluated_models
@@ -898,6 +924,40 @@ dontNegateSinglePredictors <- function(disj) {
   n_vars <- rowSums(!is.na(disj[,,drop=FALSE]))
   disj[n_vars == 1, 1] <- abs(disj[n_vars == 1, 1])
   disj
+}
+
+#' Refit the logic decision trees
+#'
+#' Newly fit the decision trees in the \code{logicDT} model using
+#' the supplied tree control parameters.
+#' This is especially useful if, e.g., the model was initially trained
+#' without utilizing a continuous covariable or fitting linear models and
+#' now 4pL model shall be fitted.
+#'
+#' @param model A fitted \code{logicDT} model
+#' @param tree_control Tree control parameters. This object should be
+#'   constructed using the function \code{\link{tree.control}}.
+#'   Alternatively, the old \code{tree_control} from \code{model} can be
+#'   modified and specified here.
+#' @return The \code{logicDT} model with newly fitted trees
+#'
+#' @export
+refitTrees <- function(model, tree_control) {
+  model$tree_control <- tree_control
+
+  score_rule <- getScoreRule(model$scoring_rule)
+  X2 <- getDesignMatrix(model$X, model$disj)
+  pet <- fitPET(X2, model$y, model$Z, model$tree_control$nodesize, model$tree_control$split_criterion,
+                model$tree_control$alpha, model$tree_control$cp, model$tree_control$smoothing,
+                model$tree_control$mtry, model$tree_control$covariable_final)
+  ensemble <- fitPETs(model$X_train, model$y_train, model$X_val, model$y_val, model$Z_train, model$Z_val,
+                      model$use_validation, model$y_bin, model$tree_control$nodesize,
+                      model$tree_control$split_criterion, model$tree_control$alpha, model$tree_control$cp,
+                      model$tree_control$smoothing, model$tree_control$mtry, model$tree_control$covariable_final,
+                      model$disj, sum(rowSums(!is.na(model$disj)) > 0), score_rule, model$gamma, TRUE)
+  model$pet <- pet
+  model$ensemble <- ensemble
+  return(model)
 }
 
 simplifyMatrix <- function(disj) {
@@ -1026,7 +1086,7 @@ translateLogicPET <- function(disj, X) {
 #' @param y Response vector. 0-1 coding for binary outcomes,
 #'   otherwise conventional regression is performed.
 #' @param Z Numeric vector of (univariate) input samples.
-#' @return An object of class "4pl" which is just a numeric
+#' @return An object of class "4pl" which contains a numeric
 #'   vector of the fitted parameters b, c, d, and e.
 #'
 #' @export
@@ -1059,6 +1119,58 @@ predict.4pl <- function(object, Z, ...) {
   if(y_bin) {
     ret[ret > 1] <- 1
     ret[ret < 0] <- 0
+  }
+  return(ret)
+}
+
+#' Fitting linear models
+#'
+#' Method for fitting linear models.
+#' In the fashion of this package, only binary and quantitative
+#' outcomes are supported.
+#'
+#' For binary outcomes, predictions are cut at 0 or 1 for generating
+#' proper probability estimates.
+#'
+#' @param y Response vector. 0-1 coding for binary outcomes,
+#'   otherwise conventional regression is performed.
+#' @param Z Numeric vector of (univariate) input samples.
+#' @return An object of class "linear" which contains a numeric
+#'   vector of the fitted parameters b and c.
+#'
+#' @export
+fitLinearModel <- function(y, Z) {
+  if(any(!(y %in% c(0, 1)))) {
+    y <- as.numeric(y)
+  } else {
+    y <- as.integer(y)
+  }
+  .Call(fitLinearModel_, y, Z)
+}
+
+#' Prediction for linear models
+#'
+#' Use new input data and a fitted linear
+#' model to predict corresponding outcomes.
+#'
+#' For binary outcomes, predictions are cut at 0 or 1 for generating
+#' proper probability estimates.
+#'
+#' @param object Fitted linear model
+#' @param Z Numeric vector of new input samples
+#' @param ... Ignored additional parameters
+#' @return A numeric vector of predictions. For binary outcomes,
+#'   this is a vector with estimates for
+#'   \eqn{P(Y=1 \mid X = x)}.
+#'
+#' @export
+predict.linear <- function(object, Z, ...) {
+  bcde <- object[[1]]
+  y_bin <- object[[2]]
+  ret <- bcde[1] + bcde[2] * Z
+  if(y_bin) {
+    # Logistic transformation due to LDA model:
+    ret <- 1/(1 + exp(-ret))
   }
   return(ret)
 }

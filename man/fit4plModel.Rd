@@ -13,7 +13,7 @@ otherwise conventional regression is performed.}
 \item{Z}{Numeric vector of (univariate) input samples.}
 }
 \value{
-An object of class "4pl" which is just a numeric
+An object of class "4pl" which contains a numeric
   vector of the fitted parameters b, c, d, and e.
 }
 \description{

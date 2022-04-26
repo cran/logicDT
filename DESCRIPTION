@@ -1,9 +1,9 @@
 Package: logicDT
 Type: Package
 Title: Identifying Interactions Between Binary Predictors
-Version: 1.0.1
+Version: 1.0.2
 Authors@R: person("Michael", "Lau", email = "michael.lau@hhu.de",
-  role = c("aut", "cre"))
+  role = c("aut", "cre"), comment = c(ORCID = "0000-0002-5327-8351"))
 Description: A global statistical learning method
   which tries to find the best set of predictors and interactions
   between predictors for modeling binary or quantitative response data.
@@ -17,8 +17,8 @@ Encoding: UTF-8
 Imports: graphics, stats, utils
 RoxygenNote: 7.1.2
 NeedsCompilation: yes
-Packaged: 2021-11-20 00:11:18 UTC; Michael
-Author: Michael Lau [aut, cre]
+Packaged: 2022-04-25 19:44:28 UTC; Michael
+Author: Michael Lau [aut, cre] (<https://orcid.org/0000-0002-5327-8351>)
 Maintainer: Michael Lau <michael.lau@hhu.de>
 Repository: CRAN
-Date/Publication: 2021-11-21 16:10:14 UTC
+Date/Publication: 2022-04-26 11:20:02 UTC

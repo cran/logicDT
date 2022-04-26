@@ -5,7 +5,7 @@ int* mtry_vars_raw;
 int* mtry_vars;
 int total_length_global;
 
-double buildModel(SEXP X_train, SEXP y_train, SEXP Z_train, SEXP Z_val, int* disj, int n_conj, int n_vars, int nodesize, double cp, int smoothing, int mtry, int covariable_mode, int scoring_rule, SEXP X_val, SEXP y_val, int use_validation, int y_bin, eval_models_list** models) {
+double buildModel(SEXP X_train, SEXP y_train, SEXP Z_train, SEXP Z_val, int* disj, int n_conj, int n_vars, int nodesize, int split_criterion, double alpha, double cp, int smoothing, int mtry, int covariable_mode, int scoring_rule, double gamma, SEXP X_val, SEXP y_val, int use_validation, int y_bin, eval_models_list** models) {
   int i;
   for(i = 0; i < n_conj; i++) {
     if(disj[i] == NA_INTEGER)
@@ -34,7 +34,7 @@ double buildModel(SEXP X_train, SEXP y_train, SEXP Z_train, SEXP Z_val, int* dis
       else break;
     }
 
-    pet_ensemble_t* eval = fitPETsIntern(X_train, y_train, X_val, y_val, Z_train, Z_val, use_validation, y_bin, nodesize, cp, smoothing, mtry, covariable_mode, disj, n_conj, n_vars, real_n_conj, scoring_rule, 0);
+    pet_ensemble_t* eval = fitPETsIntern(X_train, y_train, X_val, y_val, Z_train, Z_val, use_validation, y_bin, nodesize, split_criterion, alpha, cp, smoothing, mtry, covariable_mode, disj, n_conj, n_vars, real_n_conj, scoring_rule, gamma, 0);
     double score = eval->score;
     Free(eval);
     eval_models_list* new_model_entry = (eval_models_list*) Calloc(1, eval_models_list);
@@ -47,14 +47,14 @@ double buildModel(SEXP X_train, SEXP y_train, SEXP Z_train, SEXP Z_val, int* dis
     return score;
   }
 
-  pet_ensemble_t* eval = fitPETsIntern(X_train, y_train, X_val, y_val, Z_train, Z_val, use_validation, y_bin, nodesize, cp, smoothing, mtry, covariable_mode, disj, n_conj, n_vars, real_n_conj, scoring_rule, 0);
+  pet_ensemble_t* eval = fitPETsIntern(X_train, y_train, X_val, y_val, Z_train, Z_val, use_validation, y_bin, nodesize, split_criterion, alpha, cp, smoothing, mtry, covariable_mode, disj, n_conj, n_vars, real_n_conj, scoring_rule, gamma, 0);
   double score = eval->score;
   Free(eval);
   return score;
 }
 
-sa_eval_t* evaluateModel(SEXP X_train, SEXP y_train, SEXP Z_train, SEXP Z_val, double t, int acc_type, int* disj, int n_conj, int n_vars, double old_score, int nodesize, double cp, int smoothing, int mtry, int covariable_mode, int scoring_rule, SEXP X_val, SEXP y_val, int use_validation, int y_bin, eval_models_list** models) {
-  double new_score = buildModel(X_train, y_train, Z_train, Z_val, disj, n_conj, n_vars, nodesize, cp, smoothing, mtry, covariable_mode, scoring_rule, X_val, y_val, use_validation, y_bin, models);
+sa_eval_t* evaluateModel(SEXP X_train, SEXP y_train, SEXP Z_train, SEXP Z_val, double t, int acc_type, int* disj, int n_conj, int n_vars, double old_score, int nodesize, int split_criterion, double alpha, double cp, int smoothing, int mtry, int covariable_mode, int scoring_rule, double gamma, SEXP X_val, SEXP y_val, int use_validation, int y_bin, eval_models_list** models) {
+  double new_score = buildModel(X_train, y_train, Z_train, Z_val, disj, n_conj, n_vars, nodesize, split_criterion, alpha, cp, smoothing, mtry, covariable_mode, scoring_rule, gamma, X_val, y_val, use_validation, y_bin, models);
 
   double acc, rnd;
   if(!acc_type) {
@@ -243,7 +243,7 @@ int* mutateGeneration(gen_t* generation, int n_ind, int max_vars, int max_conj, 
   return disj2;
 }
 
-gp_eval_t* geneticProgrammingStep(SEXP X_train, SEXP y_train, int max_vars, int max_conj, SEXP Z_train, SEXP Z_val, gen_t* generation, int n_ind, double best_score, int nodesize, double cp, int smoothing, int mtry, int covariable_mode, int scoring_rule, SEXP X_val, SEXP y_val, int use_validation, int y_bin, int allow_conj_removal, int conjsize, SEXP X, eval_models_list** models) {
+gp_eval_t* geneticProgrammingStep(SEXP X_train, SEXP y_train, int max_vars, int max_conj, SEXP Z_train, SEXP Z_val, gen_t* generation, int n_ind, double best_score, int nodesize, int split_criterion, double alpha, double cp, int smoothing, int mtry, int covariable_mode, int scoring_rule, double gamma, SEXP X_val, SEXP y_val, int use_validation, int y_bin, int allow_conj_removal, int conjsize, SEXP X, eval_models_list** models) {
 
   int p = ncols(VECTOR_ELT(X_train, 0));
   double rnd;
@@ -315,8 +315,8 @@ gp_eval_t* geneticProgrammingStep(SEXP X_train, SEXP y_train, int max_vars, int 
     generation[n_ind].disj[i * max_conj + conj_ind1] = generation[cross_ind2].disj[i * max_conj + conj_ind2];
     generation[n_ind + 1].disj[i * max_conj + conj_ind2] = generation[cross_ind1].disj[i * max_conj + conj_ind11];
   }
-  generation[n_ind].score = getGPScore(buildModel(X_train, y_train, Z_train, Z_val, generation[n_ind].disj, max_conj, max_vars, nodesize, cp, smoothing, mtry, covariable_mode, scoring_rule, X_val, y_val, use_validation, y_bin, models), y_bin, scoring_rule);
-  generation[n_ind + 1].score = getGPScore(buildModel(X_train, y_train, Z_train, Z_val, generation[n_ind + 1].disj, max_conj, max_vars, nodesize, cp, smoothing, mtry, covariable_mode, scoring_rule, X_val, y_val, use_validation, y_bin, models), y_bin, scoring_rule);
+  generation[n_ind].score = getGPScore(buildModel(X_train, y_train, Z_train, Z_val, generation[n_ind].disj, max_conj, max_vars, nodesize, split_criterion, alpha, cp, smoothing, mtry, covariable_mode, scoring_rule, gamma, X_val, y_val, use_validation, y_bin, models), y_bin, scoring_rule);
+  generation[n_ind + 1].score = getGPScore(buildModel(X_train, y_train, Z_train, Z_val, generation[n_ind + 1].disj, max_conj, max_vars, nodesize, split_criterion, alpha, cp, smoothing, mtry, covariable_mode, scoring_rule, gamma, X_val, y_val, use_validation, y_bin, models), y_bin, scoring_rule);
   generation[n_ind].fitness = generation[n_ind].score;
   generation[n_ind + 1].fitness = generation[n_ind + 1].score;
   n_ind += 2;
@@ -341,7 +341,7 @@ gp_eval_t* geneticProgrammingStep(SEXP X_train, SEXP y_train, int max_vars, int 
     disj2 = mutateGeneration(generation, n_ind, max_vars, max_conj, p, i, cross_ind1, allow_conj_removal);
     if(disj2 != NULL) {
       generation[n_ind].disj = disj2;
-      generation[n_ind].score = getGPScore(buildModel(X_train, y_train, Z_train, Z_val, disj2, max_conj, max_vars, nodesize, cp, smoothing, mtry, covariable_mode, scoring_rule, X_val, y_val, use_validation, y_bin, models), y_bin, scoring_rule);
+      generation[n_ind].score = getGPScore(buildModel(X_train, y_train, Z_train, Z_val, disj2, max_conj, max_vars, nodesize, split_criterion, alpha, cp, smoothing, mtry, covariable_mode, scoring_rule, gamma, X_val, y_val, use_validation, y_bin, models), y_bin, scoring_rule);
       generation[n_ind].fitness = generation[n_ind].score;
       n_ind++;
       iter++;
@@ -355,7 +355,7 @@ gp_eval_t* geneticProgrammingStep(SEXP X_train, SEXP y_train, int max_vars, int 
   return ret;
 }
 
-SEXP geneticProgramming_(SEXP X_train, SEXP y_train, SEXP max_vars_raw, SEXP max_conj_raw, SEXP max_gen_raw, SEXP gp_sigma_raw, SEXP gp_fs_interval_raw, SEXP Z_train, SEXP Z_val, SEXP nodesize_raw, SEXP cp_raw, SEXP smoothing_raw, SEXP mtry_raw, SEXP covariable_mode_raw, SEXP scoring_rule_raw, SEXP X_val, SEXP y_val, SEXP use_validation_raw, SEXP y_bin_raw, SEXP allow_conj_removal_raw, SEXP conjsize_raw, SEXP X) {
+SEXP geneticProgramming_(SEXP X_train, SEXP y_train, SEXP max_vars_raw, SEXP max_conj_raw, SEXP max_gen_raw, SEXP gp_sigma_raw, SEXP gp_fs_interval_raw, SEXP Z_train, SEXP Z_val, SEXP nodesize_raw, SEXP split_criterion_raw, SEXP alpha_raw, SEXP cp_raw, SEXP smoothing_raw, SEXP mtry_raw, SEXP covariable_mode_raw, SEXP scoring_rule_raw, SEXP gamma_raw, SEXP X_val, SEXP y_val, SEXP use_validation_raw, SEXP y_bin_raw, SEXP allow_conj_removal_raw, SEXP conjsize_raw, SEXP X) {
   int n_vars = asInteger(max_vars_raw);
   int n_conj = asInteger(max_conj_raw);
   int max_gen = asInteger(max_gen_raw);
@@ -364,11 +364,14 @@ SEXP geneticProgramming_(SEXP X_train, SEXP y_train, SEXP max_vars_raw, SEXP max
   int gp_fs_interval = asInteger(gp_fs_interval_raw);
 
   int nodesize = asInteger(nodesize_raw);
+  int split_criterion = asInteger(split_criterion_raw);
+  double alpha = asReal(alpha_raw);
   double cp = asReal(cp_raw);
   int smoothing = asInteger(smoothing_raw);
   int mtry = asInteger(mtry_raw);
   int covariable_mode = asInteger(covariable_mode_raw);
   int scoring_rule = asInteger(scoring_rule_raw);
+  double gamma = asReal(gamma_raw);
   int use_validation = asLogical(use_validation_raw);
   int y_bin = asLogical(y_bin_raw);
   int allow_conj_removal = asLogical(allow_conj_removal_raw);
@@ -397,7 +400,7 @@ SEXP geneticProgramming_(SEXP X_train, SEXP y_train, SEXP max_vars_raw, SEXP max
     }
     // generation[i].disj[0] = (unif_rand() * p) + 1;
     generation[i].disj[0] = i + 1;
-    generation[i].score = getGPScore(buildModel(X_train, y_train, Z_train, Z_val, generation[i].disj, n_conj, n_vars, nodesize, cp, smoothing, mtry, covariable_mode, scoring_rule, X_val, y_val, use_validation, y_bin, models), y_bin, scoring_rule);
+    generation[i].score = getGPScore(buildModel(X_train, y_train, Z_train, Z_val, generation[i].disj, n_conj, n_vars, nodesize, split_criterion, alpha, cp, smoothing, mtry, covariable_mode, scoring_rule, gamma, X_val, y_val, use_validation, y_bin, models), y_bin, scoring_rule);
     generation[i].fitness = generation[i].score;
   }
   qsort(generation, n_ind, sizeof(gen_t), cmp_gen_score);
@@ -413,7 +416,7 @@ SEXP geneticProgramming_(SEXP X_train, SEXP y_train, SEXP max_vars_raw, SEXP max
       generation = (gen_t*) Realloc(generation, allocd, gen_t);
     }
 
-    current_eval = geneticProgrammingStep(X_train, y_train, n_vars, n_conj, Z_train, Z_val, generation, n_ind, best_score, nodesize, cp, smoothing, mtry, covariable_mode, scoring_rule, X_val, y_val, use_validation, y_bin, allow_conj_removal, conjsize, X, models);
+    current_eval = geneticProgrammingStep(X_train, y_train, n_vars, n_conj, Z_train, Z_val, generation, n_ind, best_score, nodesize, split_criterion, alpha, cp, smoothing, mtry, covariable_mode, scoring_rule, gamma, X_val, y_val, use_validation, y_bin, allow_conj_removal, conjsize, X, models);
     total_iter += current_eval->iter;
 
     if(i % gp_fs_interval == 0)
@@ -578,7 +581,7 @@ SEXP predictGP_(SEXP model, SEXP X_raw, SEXP Z_raw, SEXP type_raw, SEXP n_models
   return ret;
 }
 
-sa_eval_t* simulatedAnnealingStep(SEXP X_train, SEXP y_train, int max_vars, int max_conj, SEXP Z_train, SEXP Z_val, int* disj, int n_conj_raw, int n_vars_raw, double t, int acc_type, double score, int nodesize, double cp, int smoothing, int mtry, int covariable_mode, int scoring_rule, SEXP X_val, SEXP y_val, int use_validation, int y_bin, int allow_conj_removal, int conjsize, SEXP X, eval_models_list** models) {
+sa_eval_t* simulatedAnnealingStep(SEXP X_train, SEXP y_train, int max_vars, int max_conj, SEXP Z_train, SEXP Z_val, int* disj, int n_conj_raw, int n_vars_raw, double t, int acc_type, double score, int nodesize, int split_criterion, double alpha, double cp, int smoothing, int mtry, int covariable_mode, int scoring_rule, double gamma, SEXP X_val, SEXP y_val, int use_validation, int y_bin, int allow_conj_removal, int conjsize, SEXP X, eval_models_list** models) {
   int p = ncols(VECTOR_ELT(X_train, 0));
 
   int* disj2 = (int*) Calloc(n_conj_raw * n_vars_raw, int);
@@ -754,11 +757,11 @@ sa_eval_t* simulatedAnnealingStep(SEXP X_train, SEXP y_train, int max_vars, int 
 
     if (conjsum < conjsize || conjsum > nrows(X) - conjsize) {
       Free(disj2);
-      return simulatedAnnealingStep(X_train, y_train, max_vars, max_conj, Z_train, Z_val, disj, n_conj_raw, n_vars_raw, t, acc_type, score, nodesize, cp, smoothing, mtry, covariable_mode, scoring_rule, X_val, y_val, use_validation, y_bin, allow_conj_removal, conjsize, X, models);
+      return simulatedAnnealingStep(X_train, y_train, max_vars, max_conj, Z_train, Z_val, disj, n_conj_raw, n_vars_raw, t, acc_type, score, nodesize, split_criterion, alpha, cp, smoothing, mtry, covariable_mode, scoring_rule, gamma, X_val, y_val, use_validation, y_bin, allow_conj_removal, conjsize, X, models);
     }
   }
 
-  sa_eval_t* eval = evaluateModel(X_train, y_train, Z_train, Z_val, t, acc_type, disj2, n_conj_raw, n_vars_raw, score, nodesize, cp, smoothing, mtry, covariable_mode, scoring_rule,
+  sa_eval_t* eval = evaluateModel(X_train, y_train, Z_train, Z_val, t, acc_type, disj2, n_conj_raw, n_vars_raw, score, nodesize, split_criterion, alpha, cp, smoothing, mtry, covariable_mode, scoring_rule, gamma,
                                    X_val, y_val, use_validation, y_bin, models);
   if(!(eval->acc))
     memcpy(disj2, disj, n_conj_raw * n_vars_raw * sizeof(int));
@@ -766,7 +769,7 @@ sa_eval_t* simulatedAnnealingStep(SEXP X_train, SEXP y_train, int max_vars, int 
   return eval;
 }
 
-SEXP simulatedAnnealing_(SEXP X_train, SEXP y_train, SEXP max_vars_raw, SEXP max_conj_raw, SEXP Z_train, SEXP Z_val, SEXP disj, SEXP t_raw, SEXP score, SEXP nodesize_raw, SEXP cp_raw, SEXP smoothing_raw, SEXP mtry_raw, SEXP covariable_mode_raw, SEXP scoring_rule_raw, SEXP X_val, SEXP y_val, SEXP use_validation_raw, SEXP y_bin_raw, SEXP allow_conj_removal_raw, SEXP conjsize_raw, SEXP X, SEXP cooling_schedule) {
+SEXP simulatedAnnealing_(SEXP X_train, SEXP y_train, SEXP max_vars_raw, SEXP max_conj_raw, SEXP Z_train, SEXP Z_val, SEXP disj, SEXP t_raw, SEXP score, SEXP nodesize_raw, SEXP split_criterion_raw, SEXP alpha_raw, SEXP cp_raw, SEXP smoothing_raw, SEXP mtry_raw, SEXP covariable_mode_raw, SEXP scoring_rule_raw, SEXP gamma_raw, SEXP X_val, SEXP y_val, SEXP use_validation_raw, SEXP y_bin_raw, SEXP allow_conj_removal_raw, SEXP conjsize_raw, SEXP X, SEXP cooling_schedule) {
   int lower_temp;
   double t = asReal(t_raw);
   double end_temp = asReal(getListElement(cooling_schedule, "real_end_temp"));
@@ -799,11 +802,14 @@ SEXP simulatedAnnealing_(SEXP X_train, SEXP y_train, SEXP max_vars_raw, SEXP max
   int max_vars = asInteger(max_vars_raw);
   int max_conj = asInteger(max_conj_raw);
   int nodesize = asInteger(nodesize_raw);
+  int split_criterion = asInteger(split_criterion_raw);
+  double alpha = asReal(alpha_raw);
   double cp = asReal(cp_raw);
   int smoothing = asInteger(smoothing_raw);
   int mtry = asInteger(mtry_raw);
   int covariable_mode = asInteger(covariable_mode_raw);
   int scoring_rule = asInteger(scoring_rule_raw);
+  double gamma = asReal(gamma_raw);
   int use_validation = asLogical(use_validation_raw);
   int y_bin = asLogical(y_bin_raw);
   int allow_conj_removal = asLogical(allow_conj_removal_raw);
@@ -828,7 +834,7 @@ SEXP simulatedAnnealing_(SEXP X_train, SEXP y_train, SEXP max_vars_raw, SEXP max
     real_acc_sum = 0;
     score_sum = 0.0;
     for(i = 0; i < markov_iter; i++) {
-      eval = simulatedAnnealingStep(X_train, y_train, max_vars, max_conj, Z_train, Z_val, disj2, n_conj, n_vars, t, acc_type, current_score, nodesize, cp, smoothing, mtry, covariable_mode, scoring_rule, X_val, y_val, use_validation, y_bin, allow_conj_removal, conjsize, X, models);
+      eval = simulatedAnnealingStep(X_train, y_train, max_vars, max_conj, Z_train, Z_val, disj2, n_conj, n_vars, t, acc_type, current_score, nodesize, split_criterion, alpha, cp, smoothing, mtry, covariable_mode, scoring_rule, gamma, X_val, y_val, use_validation, y_bin, allow_conj_removal, conjsize, X, models);
       if(!protect_min_conj)
         Free(disj2);
       else
@@ -914,7 +920,7 @@ SEXP simulatedAnnealing_(SEXP X_train, SEXP y_train, SEXP max_vars_raw, SEXP max
   return ret_obj;
 }
 
-gs_eval_t* greedyStep(SEXP X_train, SEXP y_train, int max_vars, int max_conj, SEXP Z_train, SEXP Z_val, int* disj, int n_conj_raw, int n_vars_raw, double score, int mtry_greedy, int greedy_mod, int greedy_rem, int nodesize, double cp, int smoothing, int mtry, int covariable_mode, int scoring_rule, SEXP X_val, SEXP y_val, int use_validation, int y_bin, int allow_conj_removal, int conjsize, SEXP X) {
+gs_eval_t* greedyStep(SEXP X_train, SEXP y_train, int max_vars, int max_conj, SEXP Z_train, SEXP Z_val, int* disj, int n_conj_raw, int n_vars_raw, double score, int mtry_greedy, int greedy_mod, int greedy_rem, int nodesize, int split_criterion, double alpha, double cp, int smoothing, int mtry, int covariable_mode, int scoring_rule, double gamma, SEXP X_val, SEXP y_val, int use_validation, int y_bin, int allow_conj_removal, int conjsize, SEXP X) {
   int p = ncols(VECTOR_ELT(X_train, 0));
 
   int* disj2 = (int*) Calloc(n_conj_raw * n_vars_raw, int);
@@ -963,7 +969,7 @@ gs_eval_t* greedyStep(SEXP X_train, SEXP y_train, int max_vars, int max_conj, SE
 
       disj2[n_conj] = mtry_result + 1;
       iter++;
-      current_score = buildModel(X_train, y_train, Z_train, Z_val, disj2, n_conj_raw, n_vars_raw, nodesize, cp, smoothing, mtry, covariable_mode, scoring_rule, X_val, y_val, use_validation, y_bin, NULL);
+      current_score = buildModel(X_train, y_train, Z_train, Z_val, disj2, n_conj_raw, n_vars_raw, nodesize, split_criterion, alpha, cp, smoothing, mtry, covariable_mode, scoring_rule, gamma, X_val, y_val, use_validation, y_bin, NULL);
       if(current_score < min_score) {
         min_score = current_score;
         memcpy(min_conj, disj2, n_conj_raw * n_vars_raw * sizeof(int));
@@ -984,7 +990,7 @@ gs_eval_t* greedyStep(SEXP X_train, SEXP y_train, int max_vars, int max_conj, SE
         disj2[i * n_conj_raw + (n_conj-1)] = NA_INTEGER;
       }
       iter++;
-      current_score = buildModel(X_train, y_train, Z_train, Z_val, disj2, n_conj_raw, n_vars_raw, nodesize, cp, smoothing, mtry, covariable_mode, scoring_rule, X_val, y_val, use_validation, y_bin, NULL);
+      current_score = buildModel(X_train, y_train, Z_train, Z_val, disj2, n_conj_raw, n_vars_raw, nodesize, split_criterion, alpha, cp, smoothing, mtry, covariable_mode, scoring_rule, gamma, X_val, y_val, use_validation, y_bin, NULL);
       if(current_score < min_score) {
         min_score = current_score;
         memcpy(min_conj, disj2, n_conj_raw * n_vars_raw * sizeof(int));
@@ -1042,7 +1048,7 @@ gs_eval_t* greedyStep(SEXP X_train, SEXP y_train, int max_vars, int max_conj, SE
         }
 
         iter++;
-        current_score = buildModel(X_train, y_train, Z_train, Z_val, disj2, n_conj_raw, n_vars_raw, nodesize, cp, smoothing, mtry, covariable_mode, scoring_rule, X_val, y_val, use_validation, y_bin, NULL);
+        current_score = buildModel(X_train, y_train, Z_train, Z_val, disj2, n_conj_raw, n_vars_raw, nodesize, split_criterion, alpha, cp, smoothing, mtry, covariable_mode, scoring_rule, gamma, X_val, y_val, use_validation, y_bin, NULL);
         if(current_score < min_score) {
           min_score = current_score;
           memcpy(min_conj, disj2, n_conj_raw * n_vars_raw * sizeof(int));
@@ -1062,7 +1068,7 @@ gs_eval_t* greedyStep(SEXP X_train, SEXP y_train, int max_vars, int max_conj, SE
         disj2[(n_vars_here-1) * n_conj_raw + i] = NA_INTEGER;
 
         iter++;
-        current_score = buildModel(X_train, y_train, Z_train, Z_val, disj2, n_conj_raw, n_vars_raw, nodesize, cp, smoothing, mtry, covariable_mode, scoring_rule, X_val, y_val, use_validation, y_bin, NULL);
+        current_score = buildModel(X_train, y_train, Z_train, Z_val, disj2, n_conj_raw, n_vars_raw, nodesize, split_criterion, alpha, cp, smoothing, mtry, covariable_mode, scoring_rule, gamma, X_val, y_val, use_validation, y_bin, NULL);
         if(current_score < min_score) {
           min_score = current_score;
           memcpy(min_conj, disj2, n_conj_raw * n_vars_raw * sizeof(int));
@@ -1102,7 +1108,7 @@ gs_eval_t* greedyStep(SEXP X_train, SEXP y_train, int max_vars, int max_conj, SE
           }
 
           iter++;
-          current_score = buildModel(X_train, y_train, Z_train, Z_val, disj2, n_conj_raw, n_vars_raw, nodesize, cp, smoothing, mtry, covariable_mode, scoring_rule, X_val, y_val, use_validation, y_bin, NULL);
+          current_score = buildModel(X_train, y_train, Z_train, Z_val, disj2, n_conj_raw, n_vars_raw, nodesize, split_criterion, alpha, cp, smoothing, mtry, covariable_mode, scoring_rule, gamma, X_val, y_val, use_validation, y_bin, NULL);
           if(current_score < min_score) {
             min_score = current_score;
             memcpy(min_conj, disj2, n_conj_raw * n_vars_raw * sizeof(int));
@@ -1131,7 +1137,7 @@ gs_eval_t* greedyStep(SEXP X_train, SEXP y_train, int max_vars, int max_conj, SE
   return eval;
 }
 
-SEXP greedySearch_(SEXP X_train, SEXP y_train, SEXP max_vars_raw, SEXP max_conj_raw, SEXP Z_train, SEXP Z_val, SEXP disj_raw, SEXP score, SEXP mtry_greedy_raw, SEXP greedy_mod_raw, SEXP greedy_rem_raw, SEXP nodesize_raw, SEXP cp_raw, SEXP smoothing_raw, SEXP mtry_raw, SEXP covariable_mode_raw, SEXP scoring_rule_raw, SEXP X_val, SEXP y_val, SEXP use_validation_raw, SEXP y_bin_raw, SEXP allow_conj_removal_raw, SEXP conjsize_raw, SEXP X) {
+SEXP greedySearch_(SEXP X_train, SEXP y_train, SEXP max_vars_raw, SEXP max_conj_raw, SEXP Z_train, SEXP Z_val, SEXP disj_raw, SEXP score, SEXP mtry_greedy_raw, SEXP greedy_mod_raw, SEXP greedy_rem_raw, SEXP nodesize_raw, SEXP split_criterion_raw, SEXP alpha_raw, SEXP cp_raw, SEXP smoothing_raw, SEXP mtry_raw, SEXP covariable_mode_raw, SEXP scoring_rule_raw, SEXP gamma_raw, SEXP X_val, SEXP y_val, SEXP use_validation_raw, SEXP y_bin_raw, SEXP allow_conj_removal_raw, SEXP conjsize_raw, SEXP X) {
   double min_score = asReal(score);
   int total_iter = 0;
   int n_conj = nrows(disj_raw);
@@ -1139,11 +1145,14 @@ SEXP greedySearch_(SEXP X_train, SEXP y_train, SEXP max_vars_raw, SEXP max_conj_
   int max_vars = asInteger(max_vars_raw);
   int max_conj = asInteger(max_conj_raw);
   int nodesize = asInteger(nodesize_raw);
+  int split_criterion = asInteger(split_criterion_raw);
+  double alpha = asReal(alpha_raw);
   double cp = asReal(cp_raw);
   int smoothing = asInteger(smoothing_raw);
   int mtry = asInteger(mtry_raw);
   int covariable_mode = asInteger(covariable_mode_raw);
   int scoring_rule = asInteger(scoring_rule_raw);
+  double gamma = asReal(gamma_raw);
   int use_validation = asLogical(use_validation_raw);
   int y_bin = asLogical(y_bin_raw);
   int allow_conj_removal = asLogical(allow_conj_removal_raw);
@@ -1167,7 +1176,7 @@ SEXP greedySearch_(SEXP X_train, SEXP y_train, SEXP max_vars_raw, SEXP max_conj_
   int greedy_rem = asLogical(greedy_rem_raw);
 
   while(1) {
-    gs_eval_t* eval = greedyStep(X_train, y_train, max_vars, max_conj, Z_train, Z_val, min_conj, n_conj, n_vars, min_score, mtry_greedy, greedy_mod, greedy_rem, nodesize, cp, smoothing, mtry, covariable_mode, scoring_rule, X_val, y_val, use_validation, y_bin, allow_conj_removal, conjsize, X);
+    gs_eval_t* eval = greedyStep(X_train, y_train, max_vars, max_conj, Z_train, Z_val, min_conj, n_conj, n_vars, min_score, mtry_greedy, greedy_mod, greedy_rem, nodesize, split_criterion, alpha, cp, smoothing, mtry, covariable_mode, scoring_rule, gamma, X_val, y_val, use_validation, y_bin, allow_conj_removal, conjsize, X);
     total_iter += eval->iter;
     // if (eval->score >= min_score) {
     // if (doubleEquals(min_score, eval->score) || eval->score > min_score) {

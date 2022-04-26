@@ -1,3 +1,6 @@
+#ifndef LOGICDT_H
+#define LOGICDT_H
+
 #include <stdio.h>
 #include <math.h>
 #include <R.h>
@@ -9,11 +12,16 @@
 
 #include <R_ext/Applic.h>
 
+#include <Rmath.h>
+
 #define SUCCESS 0
 #define ERR_INVAL 1
 #define ERR_NOMEM 2
 #define FALSE 0
 #define TRUE 1
+
+#define LOWER_TOL_4PL 1e-12
+#define UPPER_TOL_4PL 1-1e-12
 
 typedef struct logic_stack_s logic_stack_t;
 typedef struct stack_frame_s stack_frame_t;
@@ -21,6 +29,7 @@ typedef struct _functional
 {
   double b,c,d,e;
   int y_bin;
+  int func_type; // 0: 4pL, 1: Linear
 } functional;
 typedef struct _node
 {
@@ -33,6 +42,7 @@ typedef struct _node
   int N_k;
   double pred;
   functional* func_pred;
+  double ll;
 } node;
 typedef struct _dataset
 {
@@ -42,6 +52,7 @@ typedef struct _dataset
   int* obs_ind;
   int N;
   double* par_scale;
+  optimfn* fn; // For alternative numerical derivatives
 } dataset;
 typedef struct _linked_list
 {
@@ -49,6 +60,7 @@ typedef struct _linked_list
   int split_bin_or_cont; // 0: Binary split, 1: Continuous split
   double split_point;
   double pred;
+  double split_crit;
   struct _linked_list *next;
 } linked_list;
 struct stack_frame_s {
@@ -64,11 +76,13 @@ typedef struct _pet
   int* splits_bin_or_cont;
   double* split_points;
   double* preds;
+  double* split_crit;
   double* train_preds;
   node* tree;
   int number_of_nodes;
   functional** model_list;
   int y_bin;
+  int covariable_mode;
 } pet_t;
 typedef struct _pet_preds
 {
@@ -108,7 +122,7 @@ void tree_destroy(node* tree);
 void pet_destroy(pet_t* pet, int destroy_tree);
 void rebuild_tree(SEXP pet);
 
-linked_list* set_values_and_next(linked_list* l, int split, int split_bin_or_cont, double split_point, double pred);
+linked_list* set_values_and_next(linked_list* l, int split, int split_bin_or_cont, double split_point, double pred, double split_crit);
 
 double calcDev(double* predictions, int* y, int N);
 double calcNCE(double* predictions, int* y, int N);
@@ -120,10 +134,10 @@ double calcAUCSorted(double* predictions, int* y, int N);
 double calcAUCUnsorted(double* predictions, int* y, int N);
 double calcMSE(double* predictions, double* y, int N);
 SEXP C_PET_TO_R_PET(pet_t* pet, int N);
-SEXP fitPETs_(SEXP X_train_raw, SEXP y_train_raw, SEXP X_val_raw, SEXP y_val_raw, SEXP Z_train_raw, SEXP Z_val_raw, SEXP use_validation_raw, SEXP y_bin_raw, SEXP nodesize_raw, SEXP cp_raw, SEXP smoothing_raw, SEXP mtry_raw, SEXP covariable_mode_raw, SEXP disj_raw, SEXP real_n_conj_raw, SEXP scoring_rule_raw, SEXP return_full_model_raw);
-pet_ensemble_t* fitPETsIntern(SEXP X_train_raw, SEXP y_train_raw, SEXP X_val_raw, SEXP y_val_raw, SEXP Z_train_raw, SEXP Z_val_raw, int use_validation, int y_bin, int nodesize, double cp, int smoothing, int mtry, int covariable_mode, int* disj, int n_conj, int n_vars, int real_n_conj, int scoring_rule, int return_full_model);
-SEXP fitPET_(SEXP X_raw, SEXP y_raw, SEXP Z_raw, SEXP nodesize_raw, SEXP cp_raw, SEXP smoothing_raw, SEXP mtry_raw, SEXP covariable_mode_raw);
-pet_t* fitPETIntern(int* X, int* bin_y, double* quant_y, int y_bin, double* Z, int N, int p, int pZ, int nodesize, double cp, int smoothing, int mtry, int covariable_mode);
+SEXP fitPETs_(SEXP X_train_raw, SEXP y_train_raw, SEXP X_val_raw, SEXP y_val_raw, SEXP Z_train_raw, SEXP Z_val_raw, SEXP use_validation_raw, SEXP y_bin_raw, SEXP nodesize_raw, SEXP split_criterion_raw, SEXP alpha_raw, SEXP cp_raw, SEXP smoothing_raw, SEXP mtry_raw, SEXP covariable_mode_raw, SEXP disj_raw, SEXP real_n_conj_raw, SEXP scoring_rule_raw, SEXP gamma_raw, SEXP return_full_model_raw);
+pet_ensemble_t* fitPETsIntern(SEXP X_train_raw, SEXP y_train_raw, SEXP X_val_raw, SEXP y_val_raw, SEXP Z_train_raw, SEXP Z_val_raw, int use_validation, int y_bin, int nodesize, int split_criterion, double alpha, double cp, int smoothing, int mtry, int covariable_mode, int* disj, int n_conj, int n_vars, int real_n_conj, int scoring_rule, double gamma, int return_full_model);
+SEXP fitPET_(SEXP X_raw, SEXP y_raw, SEXP Z_raw, SEXP nodesize_raw, SEXP split_criterion_raw, SEXP alpha_raw, SEXP cp_raw, SEXP smoothing_raw, SEXP mtry_raw, SEXP covariable_mode_raw);
+pet_t* fitPETIntern(int* X, int* bin_y, double* quant_y, int y_bin, double* Z, int N, int p, int pZ, int nodesize, int split_criterion, double alpha, double cp, int smoothing, int mtry, int covariable_mode);
 SEXP predict_(SEXP pet, SEXP X_raw, SEXP Z_raw, SEXP type_raw, SEXP leaves_raw);
 pet_preds_t* predictIntern(node* tree, int* X, double* Z, int N, int type, int leaves);
 SEXP predictEnsemble_(SEXP ensemble, SEXP X_raw, SEXP Z_raw, SEXP type_raw, SEXP leaves_raw);
@@ -146,14 +160,26 @@ int cmp_y_probs_int(const void* value1, const void* value2);
 int cmp_y_probs_double(const void* value1, const void* value2);
 int cmp_y_Z_pair(const void* value1, const void* value2);
 
-functional** functionalLeaves(node* tree, int number_of_nodes, int* bin_y, double* quant_y, int y_bin, double* Z);
+functional** functionalLeaves(node* tree, int number_of_nodes, int* bin_y, double* quant_y, int y_bin, double* Z, int covariable_mode, int already_fitted);
 double binLogLikelihood(int n, double* par, void* ex);
 void binLogLikelihoodGrad(int n, double* par, double* gr, void* ex);
 double squaredError(int n, double* par, void* ex);
 void squaredErrorGrad(int n, double* par, double* gr, void* ex);
+void numericalGrad(int n, double* par, double* gr, void* ex);
 functional* fit4plModel(int* bin_y, double* quant_y, int y_bin, double y_mean, double* Z, int N, int* obs_ind);
 SEXP fit4plModel_(SEXP y, SEXP Z);
 double eval4plModel(functional* func_pred, double Z);
-double* fitLinearModel(double* x, double* y, int N);
+double* fitLinModel(double* x, double* y, int N);
+SEXP fitLinearModel_(SEXP y, SEXP Z);
+functional* fitLinearModel(int* bin_y, double* quant_y, int y_bin, double y_mean, double* Z, int N, int* obs_ind);
+double evalLinearModel(functional* func_pred, double Z);
+functional* fitLDAModel(int* bin_y, double* quant_y, int y_bin, double y_mean, double* Z, int N, int* obs_ind);
+
+double calcBinLL(double* predictions, int* y, int N, int* obs_ind);
+double calcQuantLL(double* predictions, double* y, int N, int* obs_ind);
+double likelihoodRatioTest(double full_ll, double reduced_ll, int N, int df, int y_bin);
+
+
+#endif /* LOGICDT_H */
 
 

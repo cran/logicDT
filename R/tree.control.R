@@ -2,7 +2,8 @@
 #'
 #' Configure the fitting process of individual decision trees.
 #'
-#' If any considered split \eqn{s} leads to
+#' For the Gini or MSE splitting criterion,
+#' if any considered split \eqn{s} leads to
 #' \deqn{P(t) \cdot \Delta I(s,t) > \texttt{cp}}
 #' for a node \eqn{t}, the empirical node probability
 #' \eqn{P(t)} and the impurity reduction \eqn{\Delta I(s,t)},
@@ -15,14 +16,46 @@
 #' be interpreted as controlling the minimum reduction of the
 #' normalized mean squared error (NRMSE to the power of two).
 #'
+#' If one chooses the 4pL or linear splitting criterion, likelihood
+#' ratio tests testing the alternative of better fitting individual
+#' models are employed. The corresponding test statistic
+#' asymptotically follows a \eqn{\chi^2} distribution where
+#' the degrees of freedom are given by the difference in the
+#' number of model parameters, i.e., leading to
+#' \eqn{2 \cdot 4 - 4 = 4} degrees of freedom in the case of 4pL
+#' models and to \eqn{2 \cdot 2 - 2 = 2} degrees of freedom in
+#' the case of linear models.
+#'
+#' For binary outcomes, choosing to fit linear models for evaluating
+#' the splits or for modeling the leaves actually leads to fitting
+#' LDA (linear discriminant analysis) models.
+#'
 #' @param nodesize Minimum number of samples contained in a
 #'   terminal node. This parameter ensures that enough samples
 #'   are available for performing predictions which includes
 #'   fitting 4pL models.
+#' @param split_criterion Splitting criterion for deciding
+#'   when and how to split. The default is "gini"/"mse" which
+#'   utilizes the Gini splitting criterion for binary risk
+#'   estimation tasks and the mean squared error as impurity
+#'   measure in regression tasks. Alternatively, "4pl" can be
+#'   used if a quantitative covariable is supplied and
+#'   the parameter \code{covariable} is chosen such that 4pL
+#'   model fitting is enabled, i.e., \code{covariable = "final_4pl"}
+#'   or \code{covariable = "full_4pl"}.
+#'   A fast modeling alternative is given by "linear" which also
+#'   requires the parameter \code{covariable} to be properly
+#'   chosen, i.e., \code{covariable = "final_linear"}
+#'   or \code{covariable = "full_linear"}.
+#' @param alpha Significance threshold for the likelihood ratio
+#'   tests when using \code{split_criterion = "4pl"}. Only
+#'   splits that achieve a p-value smaller than \code{alpha} are
+#'   eligible.
 #' @param cp Complexity parameter. This parameter determines
 #'   by which amount the impurity has to be reduced to further
 #'   split a node. Here, the total tree impurity is considered.
-#'   See details for a concrete formula.
+#'   See details for a concrete formula. Only used if
+#'   \code{split_criterion = "gini"} or \code{"mse"}.
 #' @param smoothing Shall the leaf predictions for risk
 #'   estimation be smoothed? "laplace" yields Laplace smoothing.
 #'   The default is "none" which does not employ smoothing.#'
@@ -33,9 +66,10 @@
 #'   are supported.
 #' @param covariable How shall optional quantitative covariables
 #'   be handled? "constant" ignores them. Alternatively,
-#'   they can be considered as splitting variables ("_split") or
-#'   used for fitting 4pL in each leaf ("_4pl"). If either
-#'   splitting or 4pL is chosen, one should state if this
+#'   they can be considered as splitting variables ("_split"),
+#'   used for fitting 4pL models in each leaf ("_4pl"), or used
+#'   for fitting linear models in each leaf ("_linear"). If either
+#'   splitting or model fitting is chosen, one should state if this
 #'   should be handled over the whole search ("full_",
 #'   computationally expensive) or just the final trees
 #'   ("final_"). Thus, "final_4pl" would lead to fitting 4pL in
@@ -44,7 +78,8 @@
 #'   of all necessary tree parameters.
 #'
 #' @export
-tree.control <- function(nodesize = 10, cp = 0.001, smoothing = "none", mtry = "none", covariable = "final_4pl") {
+tree.control <- function(nodesize = 10, split_criterion = "gini", alpha = 0.05, cp = 0.001,
+                         smoothing = "none", mtry = "none", covariable = "final_4pl") {
   if(smoothing == "laplace")
     smoothing <- 1
   else
@@ -54,7 +89,18 @@ tree.control <- function(nodesize = 10, cp = 0.001, smoothing = "none", mtry = "
   else if(mtry == "sqrt")
     mtry <- 0
 
-  if(covariable == "full_4pl")
+  if(split_criterion == "linear")
+    split_criterion <- 2
+  else if(split_criterion == "4pl")
+    split_criterion <- 1
+  else
+    split_criterion <- 0
+
+  if(covariable == "full_linear")
+    covariable <- 3
+  else if(covariable == "final_linear")
+    covariable <- -3
+  else if(covariable == "full_4pl")
     covariable <- 2
   else if(covariable == "final_4pl")
     covariable <- -2
@@ -66,7 +112,9 @@ tree.control <- function(nodesize = 10, cp = 0.001, smoothing = "none", mtry = "
     covariable <- 0
   covariable_search <- max(covariable, 0)
   covariable_final <- abs(covariable)
-  tc <- list(nodesize = as.integer(nodesize), cp = as.numeric(cp), cp_orig = as.numeric(cp),
+  tc <- list(nodesize = as.integer(nodesize),
+             split_criterion = as.integer(split_criterion), alpha = as.numeric(alpha),
+             cp = as.numeric(cp), cp_orig = as.numeric(cp),
              smoothing = as.integer(smoothing),
              mtry = as.integer(mtry), covariable = as.integer(covariable),
              covariable_search = as.integer(covariable_search), covariable_final = as.integer(covariable_final))
