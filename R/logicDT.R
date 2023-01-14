@@ -12,6 +12,8 @@
 #' @useDynLib logicDT fit4plModel_
 #' @useDynLib logicDT fit4plModelWithGroups_
 #' @useDynLib logicDT fitLinearModel_
+#' @useDynLib logicDT prune_
+#' @useDynLib logicDT simplifyTree_
 
 fitPETs <- function(X_train, y_train, X_val, y_val, Z_train, Z_val, use_validation, y_bin, nodesize, split_criterion, alpha, cp, smoothing, mtry, covariable_mode, disj, real_n_conj, scoring_rule, gamma, return_full_model = FALSE) {
   return(.Call(fitPETs_, X_train, y_train, X_val, y_val, Z_train, Z_val, use_validation, y_bin, nodesize, split_criterion, alpha, cp, smoothing, mtry, covariable_mode, disj, real_n_conj, as.integer(scoring_rule), gamma, return_full_model))
@@ -274,8 +276,13 @@ logicDT.default <- function(X, y, max_vars = 3, max_conj = 3, Z = NULL,
   }
 
   if (val_method %in% c("bootstrap", "rv", "cv") & val_reps > 0) {
-    if (val_method == "cv")
+    if (val_method == "cv") {
       folds <- cut(seq(1, nrow(X)), breaks=val_reps, labels=FALSE)
+      shuffle <- sample(nrow(X))
+      X_shuffle <- X[shuffle,]
+      y_shuffle <- y[shuffle]
+      if(use_Z) Z_shuffle <- Z[shuffle,,drop=FALSE]
+    }
 
     for (i in 1:val_reps) {
       if (val_method == "bootstrap") {
@@ -302,9 +309,6 @@ logicDT.default <- function(X, y, max_vars = 3, max_conj = 3, Z = NULL,
           Z_val[[i]] <- Z[test_ind,,drop=FALSE]
         }
       } else {
-        shuffle <- sample(nrow(X))
-        X_shuffle <- X[shuffle,]
-        y_shuffle <- y[shuffle]
         test_ind <- which(folds == i, arr.ind = TRUE)
         train_ind <- -test_ind
         X_train[[i]] <- X_shuffle[train_ind,,drop=FALSE]
@@ -312,7 +316,6 @@ logicDT.default <- function(X, y, max_vars = 3, max_conj = 3, Z = NULL,
         X_val[[i]] <- X_shuffle[test_ind,,drop=FALSE]
         y_val[[i]] <- y_shuffle[test_ind]
         if(use_Z) {
-          Z_shuffle <- Z[shuffle,,drop=FALSE]
           Z_train[[i]] <- Z_shuffle[train_ind,,drop=FALSE]
           Z_val[[i]] <- Z_shuffle[test_ind,,drop=FALSE]
         }
@@ -894,7 +897,7 @@ simplifyConjunctions <- function(model) {
 simplifyConjunction <- function(disj, disj_ind, current_n_vars, score, variations,
                                 X_train, y_train, Z_train, Z_val, evaluated_models, tree_control, scoring_rule, gamma,
                                 X_val, y_val, use_validation, y_bin) {
-  if (current_n_vars < 2) {
+  if (length(current_n_vars) == 0 || current_n_vars < 2) {
     return(list(variations = variations, evaluated_models = evaluated_models))
   }
 
@@ -1135,17 +1138,20 @@ predict.4pl <- function(object, Z, ...) {
 #' @param y Response vector. 0-1 coding for binary outcomes,
 #'   otherwise conventional regression is performed.
 #' @param Z Numeric vector of (univariate) input samples.
+#' @param logistic Logical indicating whether, in the case of a binary
+#'   outcome, a logistic regression model should be fitted
+#'   (\code{TRUE}) or a LDA model should be fitted (\code{FALSE})
 #' @return An object of class "linear" which contains a numeric
 #'   vector of the fitted parameters b and c.
 #'
 #' @export
-fitLinearModel <- function(y, Z) {
+fitLinearModel <- function(y, Z, logistic = TRUE) {
   if(any(!(y %in% c(0, 1)))) {
     y <- as.numeric(y)
   } else {
     y <- as.integer(y)
   }
-  .Call(fitLinearModel_, y, Z)
+  .Call(fitLinearModel_, y, Z, logistic)
 }
 
 #' Prediction for linear models

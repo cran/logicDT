@@ -4,13 +4,17 @@
 \alias{fitLinearModel}
 \title{Fitting linear models}
 \usage{
-fitLinearModel(y, Z)
+fitLinearModel(y, Z, logistic = TRUE)
 }
 \arguments{
 \item{y}{Response vector. 0-1 coding for binary outcomes,
 otherwise conventional regression is performed.}
 
 \item{Z}{Numeric vector of (univariate) input samples.}
+
+\item{logistic}{Logical indicating whether, in the case of a binary
+outcome, a logistic regression model should be fitted
+(\code{TRUE}) or a LDA model should be fitted (\code{FALSE})}
 }
 \value{
 An object of class "linear" which contains a numeric

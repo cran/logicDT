@@ -423,8 +423,7 @@ static void _finalizer(SEXP tree) {
 }
 
 SEXP C_PET_TO_R_PET(pet_t* pet, int N) {
-  SEXP train_preds_R = PROTECT(allocVector(REALSXP, N));
-  memcpy(REAL(train_preds_R), pet->train_preds, N * sizeof(double));
+  SEXP placeholder_R = PROTECT(mkString("Placeholder"));
   SEXP splits_R = PROTECT(allocVector(INTSXP, pet->number_of_nodes));
   memcpy(INTEGER(splits_R), pet->splits, pet->number_of_nodes * sizeof(int));
   SEXP splits_bin_or_cont_R = PROTECT(allocVector(INTSXP, pet->number_of_nodes));
@@ -444,7 +443,7 @@ SEXP C_PET_TO_R_PET(pet_t* pet, int N) {
   SET_VECTOR_ELT(pet_R, 1, splits_bin_or_cont_R);
   SET_VECTOR_ELT(pet_R, 2, split_points_R);
   SET_VECTOR_ELT(pet_R, 3, preds_R);
-  SET_VECTOR_ELT(pet_R, 4, train_preds_R);
+  SET_VECTOR_ELT(pet_R, 4, placeholder_R);
   SET_VECTOR_ELT(pet_R, 5, bin_tree);
   if(pet->model_list != NULL) {
     SEXP model_list_R = PROTECT(allocVector(VECSXP, pet->number_of_nodes));
@@ -452,13 +451,13 @@ SEXP C_PET_TO_R_PET(pet_t* pet, int N) {
     SEXP func_pred_R, bcde_R;
     functional* current_func;
     for(int i = 0; i < pet->number_of_nodes; i++) {
-      if((pet->splits)[i] == 0) {
+      current_func = (pet->model_list)[i];
+      if(current_func != NULL) {
         func_pred_R = allocVector(VECSXP, 3);
         SET_VECTOR_ELT(model_list_R, i, func_pred_R);
         bcde_R = allocVector(REALSXP, 4);
         SET_VECTOR_ELT(func_pred_R, 0, bcde_R);
         SET_VECTOR_ELT(func_pred_R, 1, ScalarLogical(pet->y_bin));
-        current_func = (pet->model_list)[i];
         SET_VECTOR_ELT(func_pred_R, 2, ScalarInteger(current_func->func_type));
         // Assign class
         if(current_func->func_type == 0)
@@ -612,18 +611,6 @@ pet_ensemble_t* fitPETsIntern(SEXP X_train_raw, SEXP y_train_raw, SEXP X_val_raw
       scores += calcMSE(predictions, quant_y_val, N_val);
     }
 
-    scores /= n_folds;
-    // Complexity penalty; gamma > 0
-    if(gamma > 0) {
-      int real_n_vars = 0;
-      for (int j = 0; j < real_n_conj; j++) {
-        for (int k = 0; k < n_vars && disj[k*n_conj + j] != NA_INTEGER; k++) {
-          real_n_vars++;
-        }
-      }
-      scores += gamma * real_n_vars;
-    }
-
     if(use_validation)
       Free(predictions);
 
@@ -632,6 +619,18 @@ pet_ensemble_t* fitPETsIntern(SEXP X_train_raw, SEXP y_train_raw, SEXP X_val_raw
     } else {
       pet_destroy(current_pet, 1);
     }
+  }
+
+  scores /= n_folds;
+  // Complexity penalty; gamma > 0
+  if(gamma > 0) {
+    int real_n_vars = 0;
+    for (int j = 0; j < real_n_conj; j++) {
+      for (int k = 0; k < n_vars && disj[k*n_conj + j] != NA_INTEGER; k++) {
+        real_n_vars++;
+      }
+    }
+    scores += gamma * real_n_vars;
   }
 
   return_obj->score = scores;
@@ -695,39 +694,64 @@ pet_t* fitPETIntern(int* X, int* bin_y, double* quant_y, int y_bin, double* Z, i
   tree->N_k = N;
   tree->func_pred = NULL;
 
-  // split_criterion: 0 - Gini/MSE, 1 - 4pL tests, 2 - Linear tests
+  // split_criterion: 0 - Gini/MSE, 1 - 4pL tests, 2 - Linear/LDA tests, 3 - Linear/Logistic tests
   // Only use the 4pL splitting criterion if 4pL fitting is enabled
-  // covariable_mode: 0 - Nothing, 1 - Split after Z, 2 - 4pL models, 3 - Linear models
-  if(covariable_mode == 0 && split_criterion > 0)
-    covariable_mode = split_criterion + 1;
+  // covariable_mode: 0 - Nothing, 1 - Split after Z, 2 - 4pL models, 3 - Linear/LDA models, 4 - Linear/Logistic models
+  /* if(covariable_mode == 0 && split_criterion > 0)
+    covariable_mode = split_criterion + 1; */ // Already done in tree.control.R
   covariable_mode = covariable_mode * (pZ > 0);
   split_criterion = split_criterion * (pZ > 0) * (covariable_mode >= 2);
+  // Set split_criterion to logistic models for final fitting
+  if(split_criterion == 2 && covariable_mode == 4)
+    split_criterion = 3;
   int test_df = 0;
-  if(split_criterion > 0) {
-    double y_mean = 0;
-    for(i = 0; i < N; i++) {
-      if(y_bin)
-        y_mean += bin_y[i];
-      else
-        y_mean += quant_y[i];
+
+  double y_mean = 0;
+  if(y_bin) {
+    for(i = 0; i < N; i++) y_mean += bin_y[i];
+  } else {
+    for(i = 0; i < N; i++) y_mean += quant_y[i];
+  }
+  y_mean /= N;
+  if(split_criterion == 0) {
+    // Initialize root impurity
+    if(y_bin) {
+      tree->impurity = gini_impurity(y_mean);
+    } else {
+      double y_sum_2 = 0;
+      for(i = 0; i < N; i++) {
+        y_sum_2 += quant_y[i] * quant_y[i];
+      }
+      tree->impurity = mse_impurity(N, y_mean * N, y_sum_2);
     }
-    y_mean /= N;
+  } else {
     if(split_criterion == 1) {
       tree->func_pred = fit4plModel(bin_y, quant_y, y_bin, y_mean, Z, N, tree->obs_ind);
       for(i = 0; i < N; i++) train_preds[i] = eval4plModel(tree->func_pred, Z[i]);
       test_df = 4;
     }
     else {
-      tree->func_pred = fitLinearModel(bin_y, quant_y, y_bin, y_mean, Z, N, tree->obs_ind);
+      if(split_criterion == 2 || !y_bin)
+        tree->func_pred = fitLinearModel(bin_y, quant_y, y_bin, y_mean, Z, N, tree->obs_ind);
+      else
+        tree->func_pred = fitLogisticModel(bin_y, quant_y, y_bin, y_mean, Z, N, tree->obs_ind);
       for(i = 0; i < N; i++) train_preds[i] = evalLinearModel(tree->func_pred, Z[i]);
       test_df = 2;
     }
 
-    if(y_bin)
+    if(y_bin) {
       tree->ll = calcBinLL(train_preds, bin_y, N, tree->obs_ind);
-    else
+      tree->impurity = -(tree->ll)/N;
+    } else {
       tree->ll = calcQuantLL(train_preds, quant_y, N, tree->obs_ind);
+      tree->impurity = (tree->ll)/N;
+    }
   }
+  // Initialize root pred
+  if(y_bin)
+    tree->pred = calcLeafProb((int) (y_mean * N), N, smoothing);
+  else
+    tree->pred = y_mean;
 
   stack_push(stack, tree);
 
@@ -746,6 +770,11 @@ pet_t* fitPETIntern(int* X, int* bin_y, double* quant_y, int y_bin, double* Z, i
   double N_k_sum_2, N_L_sum_2, N_R_sum_2;
 
   int best_N_L;
+
+  double imp_k, imp_L, imp_R;
+  double best_imp_L, best_imp_R;
+
+  double best_pred_L, best_pred_R;
 
   int buffer_L, buffer_R;
 
@@ -831,16 +860,15 @@ pet_t* fitPETIntern(int* X, int* bin_y, double* quant_y, int y_bin, double* Z, i
       }
     }
 
+    imp_k = knot->impurity;
+
     // Stopping criterion #1
     if (y_bin && (N_k_1 > N_k - nodesize || N_k_1 < nodesize)) {
     // if (N_k <= nodesize || (y_bin && (N_k_1 == N_k || N_k_1 == 0))) { // nodesize as in ranger or randomForest
     /* ranger and randomForest aim at controlling the minimum node size before splitting
        We aim at controllin the minimum node size after splitting such that
        each terminal node holds sufficient examples for an appropriate risk prediction */
-      if(y_bin)
-        current_leaf_pred = calcLeafProb(N_k_1, N_k, smoothing);
-      else
-        current_leaf_pred = N_k_sum/N_k;
+      current_leaf_pred = knot->pred;
       make_leaf(knot, current_leaf_pred, train_preds);
       current_split_pred = set_values_and_next(current_split_pred, 0, 0, 0, current_leaf_pred, 0);
       // preds[number_of_nodes - 1] = (double) N_k_1/N_k;
@@ -890,16 +918,24 @@ pet_t* fitPETIntern(int* X, int* bin_y, double* quant_y, int y_bin, double* Z, i
       }
 
       if(split_criterion == 0) {
-        if(y_bin)
-          imp_decrease = gini_decrease((double) N_k_1/N_k, (double) N_L/N_k, (double) N_L_1/N_L, (double) N_R_1/N_R);
-        else
-          imp_decrease = mse_decrease(N_k, N_L, N_R, N_k_sum, N_L_sum, N_R_sum, N_k_sum_2, N_L_sum_2, N_R_sum_2);
+        if(y_bin) {
+          imp_L = gini_impurity((double) N_L_1/N_L); imp_R = gini_impurity((double) N_R_1/N_R);
+        } else {
+          imp_L = mse_impurity(N_L, N_L_sum, N_L_sum_2); imp_R = mse_impurity(N_R, N_R_sum, N_R_sum_2);
+        }
+        imp_decrease = impurity_decrease(imp_k, imp_L, imp_R, (double) N_L/N_k);
 
         if(p_k * imp_decrease > max_imp_decrease) {
         // if(imp_decrease > max_imp_decrease) {
           max_imp_decrease = p_k * imp_decrease;
           best_index = j;
           best_N_L = N_L;
+          best_imp_L = imp_L; best_imp_R = imp_R;
+          if(y_bin) {
+            best_pred_L = calcLeafProb(N_L_1, N_L, smoothing); best_pred_R = calcLeafProb(N_R_1, N_R, smoothing);
+          } else {
+            best_pred_L = N_L_sum/N_L; best_pred_R = N_R_sum/N_R;
+          }
         }
       } else {
         // 4pL or linear tests
@@ -926,24 +962,37 @@ pet_t* fitPETIntern(int* X, int* bin_y, double* quant_y, int y_bin, double* Z, i
           for(i = 0; i < N_L; i++) predictions_fpl[obs_ind_L[i]] = eval4plModel(fpl_L[j], Z[obs_ind_L[i]]);
           for(i = 0; i < N_R; i++) predictions_fpl[obs_ind_R[i]] = eval4plModel(fpl_R[j], Z[obs_ind_R[i]]);
         } else {
-          fpl_L[j] = fitLinearModel(bin_y, quant_y, y_bin, y_mean_L, Z, N_L, obs_ind_L);
-          fpl_R[j] = fitLinearModel(bin_y, quant_y, y_bin, y_mean_R, Z, N_R, obs_ind_R);
+          if(split_criterion == 2 || !y_bin) {
+            fpl_L[j] = fitLinearModel(bin_y, quant_y, y_bin, y_mean_L, Z, N_L, obs_ind_L);
+            fpl_R[j] = fitLinearModel(bin_y, quant_y, y_bin, y_mean_R, Z, N_R, obs_ind_R);
+          } else {
+            fpl_L[j] = fitLogisticModel(bin_y, quant_y, y_bin, y_mean_L, Z, N_L, obs_ind_L);
+            fpl_R[j] = fitLogisticModel(bin_y, quant_y, y_bin, y_mean_R, Z, N_R, obs_ind_R);
+          }
           for(i = 0; i < N_L; i++) predictions_fpl[obs_ind_L[i]] = evalLinearModel(fpl_L[j], Z[obs_ind_L[i]]);
           for(i = 0; i < N_R; i++) predictions_fpl[obs_ind_R[i]] = evalLinearModel(fpl_R[j], Z[obs_ind_R[i]]);
         }
         if(y_bin) {
           ll_L[j] = calcBinLL(predictions_fpl, bin_y, N_L, obs_ind_L);
           ll_R[j] = calcBinLL(predictions_fpl, bin_y, N_R, obs_ind_R);
+          imp_L = -(ll_L[j])/N_L; imp_R = -(ll_R[j])/N_R;
         }
         else {
           ll_L[j] = calcQuantLL(predictions_fpl, quant_y, N_L, obs_ind_L);
           ll_R[j] = calcQuantLL(predictions_fpl, quant_y, N_R, obs_ind_R);
+          imp_L = (ll_L[j])/N_L; imp_R = (ll_R[j])/N_R;
         }
         p_value = likelihoodRatioTest(ll_L[j] + ll_R[j], knot->ll, N_k, test_df, y_bin);
         if(p_value < best_p_value) {
           best_p_value = p_value;
           best_index = j;
           best_N_L = N_L;
+          best_imp_L = imp_L; best_imp_R = imp_R;
+          if(y_bin) {
+            best_pred_L = calcLeafProb(N_L_1, N_L, smoothing); best_pred_R = calcLeafProb(N_R_1, N_R, smoothing);
+          } else {
+            best_pred_L = N_L_sum/N_L; best_pred_R = N_R_sum/N_R;
+          }
         }
       }
     }
@@ -992,10 +1041,12 @@ pet_t* fitPETIntern(int* X, int* bin_y, double* quant_y, int y_bin, double* Z, i
           continue;
         }
 
-        if(y_bin)
-          imp_decrease = gini_decrease((double) N_k_1/N_k, (double) N_L/N_k, (double) N_L_1/N_L, (double) N_R_1/N_R);
-        else
-          imp_decrease = mse_decrease(N_k, N_L, N_R, N_k_sum, N_L_sum, N_R_sum, N_k_sum_2, N_L_sum_2, N_R_sum_2);
+        if(y_bin) {
+          imp_L = gini_impurity((double) N_L_1/N_L); imp_R = gini_impurity((double) N_R_1/N_R);
+        } else {
+          imp_L = mse_impurity(N_L, N_L_sum, N_L_sum_2); imp_R = mse_impurity(N_R, N_R_sum, N_R_sum_2);
+        }
+        imp_decrease = impurity_decrease(imp_k, imp_L, imp_R, (double) N_L/N_k);
 
         if(p_k * imp_decrease > max_imp_decrease) {
         // if(imp_decrease > max_imp_decrease) {
@@ -1004,6 +1055,12 @@ pet_t* fitPETIntern(int* X, int* bin_y, double* quant_y, int y_bin, double* Z, i
           bin_or_cont = 1;
           best_split_point = (Z_sorted[i].Z + Z_sorted[i+1].Z)/2;
           best_N_L = N_L;
+          best_imp_L = imp_L; best_imp_R = imp_R;
+          if(y_bin) {
+            best_pred_L = calcLeafProb(N_L_1, N_L, smoothing); best_pred_R = calcLeafProb(N_R_1, N_R, smoothing);
+          } else {
+            best_pred_L = N_L_sum/N_L; best_pred_R = N_R_sum/N_R;
+          }
         }
       }
     }
@@ -1013,10 +1070,7 @@ pet_t* fitPETIntern(int* X, int* bin_y, double* quant_y, int y_bin, double* Z, i
 
     // Stopping criterion #3
     if (best_index == -1) {
-      if(y_bin)
-        current_leaf_pred = calcLeafProb(N_k_1, N_k, smoothing);
-      else
-        current_leaf_pred = N_k_sum/N_k;
+      current_leaf_pred = knot->pred;
       make_leaf(knot, current_leaf_pred, train_preds);
       current_split_pred = set_values_and_next(current_split_pred, 0, 0, 0, current_leaf_pred, 0);
 
@@ -1033,18 +1087,14 @@ pet_t* fitPETIntern(int* X, int* bin_y, double* quant_y, int y_bin, double* Z, i
       continue;
     }
 
-    left_child = (node*) Calloc(1, node);
-    right_child = (node*) Calloc(1, node);
-    left_child->left = NULL;
-    right_child->left = NULL;
-    left_child->right = NULL;
-    right_child->right = NULL;
-    left_child->N_k = best_N_L;
-    right_child->N_k = N_k - best_N_L;
-    left_child->obs_ind = (int*) Calloc(best_N_L, int);
-    right_child->obs_ind = (int*) Calloc((N_k - best_N_L), int);
-    left_child->func_pred = NULL;
-    right_child->func_pred = NULL;
+    left_child = (node*) Calloc(1, node); right_child = (node*) Calloc(1, node);
+    left_child->left = NULL; right_child->left = NULL;
+    left_child->right = NULL; right_child->right = NULL;
+    left_child->N_k = best_N_L; right_child->N_k = N_k - best_N_L;
+    left_child->obs_ind = (int*) Calloc(best_N_L, int); right_child->obs_ind = (int*) Calloc((N_k - best_N_L), int);
+    left_child->func_pred = NULL; right_child->func_pred = NULL;
+    left_child->impurity = best_imp_L; right_child->impurity = best_imp_R;
+    left_child->pred = best_pred_L; right_child->pred = best_pred_R;
 
     if(split_criterion > 0) {
       left_child->func_pred = fpl_L[best_index];
@@ -1085,7 +1135,7 @@ pet_t* fitPETIntern(int* X, int* bin_y, double* quant_y, int y_bin, double* Z, i
     else
       best_split_crit = best_p_value;
 
-    current_split_pred = set_values_and_next(current_split_pred, best_index + 1, bin_or_cont, best_split_point, 0.0, best_split_crit);
+    current_split_pred = set_values_and_next(current_split_pred, best_index + 1, bin_or_cont, best_split_point, knot->pred, best_split_crit);
     // splits[number_of_nodes - 1] = best_index + 1;
 
     knot->leaf = 0;
@@ -1122,7 +1172,7 @@ pet_t* fitPETIntern(int* X, int* bin_y, double* quant_y, int y_bin, double* Z, i
   // use the first available covariable. (Additional ones are ignored.)
   if(pZ > 0 && covariable_mode >= 2) {
     // ToDo: Free split models
-    model_list = functionalLeaves(tree, number_of_nodes, bin_y, quant_y, y_bin, Z, covariable_mode, (split_criterion + 1) == covariable_mode);
+    model_list = functionalLeaves(tree, number_of_nodes, bin_y, quant_y, y_bin, Z, covariable_mode, (split_criterion + 1) == covariable_mode, 0);
     // Update train_preds:
     pet_preds_t* func_preds = predictIntern(tree, X, Z, N, 0, 1);
     Free(train_preds);
@@ -1275,11 +1325,13 @@ SEXP getDesignMatrix_(SEXP X_raw, SEXP disj_raw, SEXP real_n_conj_raw) {
   SEXP dimnames = PROTECT(allocVector(VECSXP, 2));
   SEXP colnames = PROTECT(allocVector(STRSXP, real_n_conj));
 
+  size_t max_size = max_var_length + 1 + 1; // For snprintf: +1 for terminating null char
+
   for (int i = 0; i < real_n_conj; i++) {
-    written_chars = sprintf(str_buffer + i * conj_length, "%d", disj[i]);
+    written_chars = snprintf(str_buffer + i * conj_length, max_size, "%d", disj[i]);
     for (int j = 1; j < n_vars && disj[j*n_conj + i] != NA_INTEGER; j++) {
       // strcat(str_buffer + i * conj_length, )
-      written_chars += sprintf(str_buffer + i * conj_length + written_chars, "^%d", disj[j*n_conj + i]);
+      written_chars += snprintf(str_buffer + i * conj_length + written_chars, max_size, "^%d", disj[j*n_conj + i]);
     }
     SET_STRING_ELT(colnames, i, mkChar(str_buffer + i * conj_length));
   }
@@ -1375,18 +1427,16 @@ int arrangeNAs(int* disj, int n_conj, int n_vars) {
 }
 */
 
-double gini_decrease(double p_k_1, double p_L, double p_L_1, double p_R_1) {
-  return 2*(p_k_1 * (1-p_k_1) - (p_L * (1-p_L_1) * p_L_1 + (1-p_L) * (1-p_R_1) * p_R_1));
+double gini_impurity(double p_1) {
+  return 2*p_1*(1-p_1);
 }
 
 double mse_impurity(int N_k, double y_sum, double y_sum_2) {
-  double y_pred = y_sum/N_k;
-  return y_sum_2 - 2 * y_pred * y_sum + y_pred * y_pred * N_k;
+  return y_sum_2/N_k - y_sum * y_sum / (N_k * N_k);
 }
 
-double mse_decrease(int N_k, int N_k_L, int N_k_R, double N_k_sum, double N_L_sum, double N_R_sum, double N_k_sum_2, double N_L_sum_2, double N_R_sum_2) {
-  double decr = mse_impurity(N_k, N_k_sum, N_k_sum_2) - mse_impurity(N_k_L, N_L_sum, N_L_sum_2) - mse_impurity(N_k_R, N_R_sum, N_R_sum_2);
-  return decr/N_k;
+double impurity_decrease(double imp_k, double imp_L, double imp_R, double p_L) {
+  return imp_k - p_L * imp_L - (1-p_L) * imp_R;
 }
 
 int stack_destroy(logic_stack_t *stack) {
@@ -1495,7 +1545,7 @@ double calcLeafProb(int N_k_1, int N_k, int smoothing) {
 
 void make_leaf(node* knot, double p_k_1, double* train_preds) {
   knot->leaf = 1;
-  knot->pred = p_k_1;
+  // knot->pred = p_k_1;
   knot->split = -1;
 
   int* obs_ind = knot->obs_ind;
@@ -1545,7 +1595,7 @@ void rebuild_tree(SEXP pet) {
   int covariable_mode = asInteger(VECTOR_ELT(pet, 8)); // !isNull(model_list_R);
   if(covariable_mode >= 2 && splits[0] == 0)
     func_buffer = REAL(VECTOR_ELT(VECTOR_ELT(model_list_R, 0), 0));
-  int func_type = covariable_mode - 2;
+  int func_type = (covariable_mode > 2); // 4pL - 0; Linear - 1
   int y_bin = asLogical(VECTOR_ELT(pet, 7));
 
 
@@ -1622,7 +1672,7 @@ linked_list* set_values_and_next(linked_list* l, int split, int split_bin_or_con
 }
 
 // 4pl model inside terminal nodes
-functional** functionalLeaves(node* tree, int number_of_nodes, int* bin_y, double* quant_y, int y_bin, double* Z, int covariable_mode, int already_fitted) {
+functional** functionalLeaves(node* tree, int number_of_nodes, int* bin_y, double* quant_y, int y_bin, double* Z, int covariable_mode, int already_fitted, int all_nodes) {
   node* current_node;
   functional** model_list = (functional**) Calloc(number_of_nodes, functional*);
   logic_stack_t *stack = stack_new();
@@ -1631,18 +1681,22 @@ functional** functionalLeaves(node* tree, int number_of_nodes, int* bin_y, doubl
 
   while(stack->top != NULL) {
     current_node = stack_pop(stack);
-    if(current_node->leaf) {
+    if(current_node->leaf || all_nodes) {
       if(!already_fitted) {
         if(current_node->func_pred != NULL)
           Free(current_node->func_pred);
         if(covariable_mode == 2)
           current_node->func_pred = fit4plModel(bin_y, quant_y, y_bin, current_node->pred, Z, current_node->N_k, current_node->obs_ind);
-        else
+        else if(covariable_mode == 3 || !y_bin)
           current_node->func_pred = fitLinearModel(bin_y, quant_y, y_bin, current_node->pred, Z, current_node->N_k, current_node->obs_ind);
+        else
+          current_node->func_pred = fitLogisticModel(bin_y, quant_y, y_bin, current_node->pred, Z, current_node->N_k, current_node->obs_ind);
       }
       model_list[i] = current_node->func_pred;
     } else {
       model_list[i] = NULL;
+    }
+    if(!(current_node->leaf)) {
       stack_push(stack, current_node->right);
       stack_push(stack, current_node->left);
     }
@@ -2006,7 +2060,7 @@ double* fitLinModel(double* x, double* y, int N) {
   return beta;
 }
 
-SEXP fitLinearModel_(SEXP y, SEXP Z) {
+SEXP fitLinearModel_(SEXP y, SEXP Z, SEXP logistic) {
   int* bin_y = NULL;
   double* quant_y = NULL;
   int y_bin = 0;
@@ -2027,7 +2081,11 @@ SEXP fitLinearModel_(SEXP y, SEXP Z) {
     for(int i = 0; i < N; i++) y_mean += quant_y[i];
   }
   y_mean /= N;
-  functional* model = fitLinearModel(bin_y, quant_y, y_bin, y_mean, Z2, N, obs_ind);
+  functional* model;
+  if(!y_bin || !asLogical(logistic))
+    model = fitLinearModel(bin_y, quant_y, y_bin, y_mean, Z2, N, obs_ind);
+  else
+    model = fitLogisticModel(bin_y, quant_y, y_bin, y_mean, Z2, N, obs_ind);
   // Correctly embed linear model
   SEXP model_R = PROTECT(allocVector(VECSXP, 3));
   SEXP bcde_R = allocVector(REALSXP, 4);
@@ -2096,6 +2154,41 @@ functional* fitLDAModel(int* bin_y, double* quant_y, int y_bin, double y_mean, d
   func_pred->func_type = 1;
   func_pred->b = log(y_mean/(1.0 - y_mean)) - 0.5 * (mu_1 + mu_0) * (mu_1 - mu_0) / sigma2;
   func_pred->c = (mu_1 - mu_0) / sigma2;
+  return func_pred;
+}
+
+functional* fitLogisticModel(int* bin_y, double* quant_y, int y_bin, double y_mean, double* Z, int N, int* obs_ind) {
+  // LDA for initial estimate
+  functional* func_pred = fitLDAModel(bin_y, quant_y, y_bin, y_mean, Z, N, obs_ind);
+
+  int MAX_ITER = 25;
+  double TOL = 1e-10;
+  double b = func_pred->b; double c = func_pred->c;
+  double b_old; double c_old;
+  double sum_pi_z, sum_pi, sum_pi_z2, sum_y, sum_z_y;
+  double pii, Zi, yi;
+  double denom;
+  for(int k = 0; k < MAX_ITER; k++) {
+    sum_pi_z = 0; sum_pi = 0; sum_pi_z2 = 0; sum_y = 0; sum_z_y = 0;
+    for(int i = 0; i < N; i++) {
+      Zi = Z[obs_ind[i]]; yi = bin_y[obs_ind[i]];
+      pii = 1/(1+exp(-(b + c*Zi)));
+      sum_pi_z += pii * Zi;
+      sum_pi += pii;
+      sum_pi_z2 += pii * Zi * Zi;
+      sum_y += yi;
+      sum_z_y += Zi * yi;
+    }
+    denom = sum_pi_z * sum_pi_z - sum_pi * sum_pi_z2;
+    b_old = b; c_old = c;
+    b += (sum_pi_z * (sum_z_y - sum_pi_z) - sum_pi_z2 * (sum_y - sum_pi))/denom;
+    c += (-sum_pi * (sum_z_y - sum_pi_z) + sum_pi_z * (sum_y - sum_pi))/denom;
+
+    // Convergence check
+    if(sqrt(((b-b_old) * (b-b_old) + (c-c_old) * (c-c_old))/(b_old*b_old + c_old*c_old)) <= TOL)
+      break;
+  }
+  func_pred->b = b; func_pred->c = c;
   return func_pred;
 }
 

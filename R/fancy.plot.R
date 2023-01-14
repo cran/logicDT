@@ -1,6 +1,6 @@
 #' @rdname plot.logicDT
 #' @name plot.logicDT
-#' @importFrom graphics par plot lines rect points text
+#' @importFrom graphics par plot lines rect points text strwidth
 #' @importFrom grDevices hcl.colors gray
 #' @export
 fancy.plot <- function(x, ...) {
@@ -196,9 +196,14 @@ fancy.plot <- function(x, ...) {
 
   # Plot split variables
   splits2 <- printable.splits(splits, splits_bin_or_cont, X)
-  cxy <- par("cxy")
+  cxy <- par("cxy"); cin <- par("cin")
   for(i in which(!leaf_pos)) {
-    text(x[i], y[i] - 0.5 * cxy[2L], labels = splits2[[i]])
+    # Scale text appropriately
+    available.width <- x[right.child[i]] - x[left.child[i]]
+    # Text width in coordinates, inches -> points
+    w <- strwidth(splits2[[i]], units = "inches") * cxy[1]/cin[1]
+    cex.text <- min(available.width/w, 1)
+    text(x[i], y[i] - 0.5 * cxy[2L], labels = splits2[[i]], cex = cex.text)
   }
 
   # Plot split points

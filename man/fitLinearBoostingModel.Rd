@@ -4,12 +4,23 @@
 \alias{fitLinearBoostingModel}
 \title{Linear models based on boosted models}
 \usage{
-fitLinearBoostingModel(model, n.iter)
+fitLinearBoostingModel(model, n.iter, type = "standard", s = NULL, ...)
 }
 \arguments{
 \item{model}{Fitted \code{logic.boosted} model}
 
 \item{n.iter}{Number of boosting iterations to be used}
+
+\item{type}{Type of linear model to be fitted. Either \code{"standard"}
+(without regularization), \code{"lasso"} (LASSO) or \code{"cv.lasso"}
+(LASSO with cross-validation for automatically configuring the complexity
+penalty).}
+
+\item{s}{Regularization parameter. Only used if \code{type = "lasso"} is
+set.}
+
+\item{...}{Additional parameters passed to \code{glmnet} or \code{cv.glmnet}
+if the corresponding model type was chosen.}
 }
 \value{
 A \code{linear.logic} model. This is a list containing
@@ -26,4 +37,7 @@ In this procedure, the logic terms are extracted from the individual
 in a regression model. For incorporating a continuous covariable
 the covariable itself as well as products of the covariable with the
 extracted logic terms are included as predictors in the regression model.
+
+For more details on the possible types of linear models, see
+\code{\link{fitLinearLogicModel}}.
 }

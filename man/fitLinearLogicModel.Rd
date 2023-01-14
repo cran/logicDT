@@ -4,7 +4,16 @@
 \alias{fitLinearLogicModel}
 \title{Linear models based on logic terms}
 \usage{
-fitLinearLogicModel(X, y, Z = NULL, disj, Z.interactions = TRUE)
+fitLinearLogicModel(
+  X,
+  y,
+  Z = NULL,
+  disj,
+  Z.interactions = TRUE,
+  type = "standard",
+  s = NULL,
+  ...
+)
 }
 \arguments{
 \item{X}{Matrix or data frame of binary input data.
@@ -23,6 +32,17 @@ index in \code{X}.}
 \item{Z.interactions}{Shall interactions with the continuous covariable
 \code{Z} be taken into account by including products of the terms with
 \code{Z}?}
+
+\item{type}{Type of linear model to be fitted. Either \code{"standard"}
+(without regularization), \code{"lasso"} (LASSO) or \code{"cv.lasso"}
+(LASSO with cross-validation for automatically configuring the complexity
+penalty).}
+
+\item{s}{Regularization parameter. Only used if \code{type = "lasso"} is
+set.}
+
+\item{...}{Additional parameters passed to \code{glmnet} or \code{cv.glmnet}
+if the corresponding model type was chosen.}
 }
 \value{
 A \code{linear.logic} model. This is a list containing
@@ -33,4 +53,33 @@ A \code{linear.logic} model. This is a list containing
 This function fits a linear or logistic regression model (based on the
 type of outcome) using the supplied logic terms, e.g., \code{$disj} from
 a fitted \code{logicDT} model.
+}
+\details{
+For creating sparse final models, the LASSO can be used for shrinking
+unnecessary term coefficients down to zero (\code{type = "lasso"}).
+If the complexity penalty \code{s} shall be automatically tuned,
+cross-validation can be employed (\code{type = "cv.lasso"}).
+However, since other hyperparameters also have to be tuned when fitting
+a linear boosting model such as the complexity penalty for restricting
+the number of variables in the terms, manually tuning the LASSO penalty
+together with the other hyperparameters is recommended.
+For every hyperparameter setting of the boosting itself, the best
+corresponding LASSO penalty \code{s} can be identified by, e.g., choosing
+the \code{s} that minimizes the validation data error.
+Thus, this hyperparameter does not have to be explicitly tuned via a grid
+search but is induced by the setting of the other hyperparameters.
+For finding the ideal value of \code{s} using independent validation data,
+the function \code{\link{get.ideal.penalty}} can be used.
+}
+\references{
+\itemize{
+  \item Tibshirani, R. (1996).
+  Regression Shrinkage and Selection via the Lasso. Journal of the Royal
+  Statistical Society. Series B (Methodological), 58(1), 267–288.
+  \doi{https://doi.org/10.1111/j.2517-6161.1996.tb02080.x}
+  \item Friedman, J., Hastie, T., & Tibshirani, R. (2010).
+  Regularization Paths for Generalized Linear Models via Coordinate Descent.
+  Journal of statistical software, 33(1), 1–22.
+  \doi{https://doi.org/10.18637/jss.v033.i01}
+}
 }

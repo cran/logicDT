@@ -43,6 +43,7 @@ typedef struct _node
   double pred;
   functional* func_pred;
   double ll;
+  double impurity;
 } node;
 typedef struct _dataset
 {
@@ -147,9 +148,9 @@ int* getDesignMatrixIntern(int* X, int N, int* disj, int n_conj, int n_vars, int
 SEXP vim_permutation_(SEXP ensemble, SEXP X_val_raw, SEXP y_val_raw, SEXP Z_val_raw, SEXP permutation_raw, SEXP disj_raw, SEXP real_n_conj_raw, SEXP scoring_rule_raw, SEXP y_bin_raw, SEXP leaves_raw);
 
 // #define [i,j]  [i*p+j]
-double gini_decrease(double p_k_1, double p_L, double p_L_1, double p_R_1);
+double gini_impurity(double p_1);
 double mse_impurity(int N_k, double y_sum, double y_sum_2);
-double mse_decrease(int N_k, int N_k_L, int N_k_R, double N_k_sum, double N_L_sum, double N_R_sum, double N_k_sum_2, double N_L_sum_2, double N_R_sum_2);
+double impurity_decrease(double imp_k, double imp_L, double imp_R, double p_L);
 
 int doubleEquals(double a, double b);
 int cmp_integer(const void* value1, const void* value2);
@@ -160,7 +161,7 @@ int cmp_y_probs_int(const void* value1, const void* value2);
 int cmp_y_probs_double(const void* value1, const void* value2);
 int cmp_y_Z_pair(const void* value1, const void* value2);
 
-functional** functionalLeaves(node* tree, int number_of_nodes, int* bin_y, double* quant_y, int y_bin, double* Z, int covariable_mode, int already_fitted);
+functional** functionalLeaves(node* tree, int number_of_nodes, int* bin_y, double* quant_y, int y_bin, double* Z, int covariable_mode, int already_fitted, int all_nodes);
 double binLogLikelihood(int n, double* par, void* ex);
 void binLogLikelihoodGrad(int n, double* par, double* gr, void* ex);
 double squaredError(int n, double* par, void* ex);
@@ -170,10 +171,11 @@ functional* fit4plModel(int* bin_y, double* quant_y, int y_bin, double y_mean, d
 SEXP fit4plModel_(SEXP y, SEXP Z);
 double eval4plModel(functional* func_pred, double Z);
 double* fitLinModel(double* x, double* y, int N);
-SEXP fitLinearModel_(SEXP y, SEXP Z);
+SEXP fitLinearModel_(SEXP y, SEXP Z, SEXP logistic);
 functional* fitLinearModel(int* bin_y, double* quant_y, int y_bin, double y_mean, double* Z, int N, int* obs_ind);
 double evalLinearModel(functional* func_pred, double Z);
 functional* fitLDAModel(int* bin_y, double* quant_y, int y_bin, double y_mean, double* Z, int N, int* obs_ind);
+functional* fitLogisticModel(int* bin_y, double* quant_y, int y_bin, double y_mean, double* Z, int N, int* obs_ind);
 
 double calcBinLL(double* predictions, int* y, int N, int* obs_ind);
 double calcQuantLL(double* predictions, double* y, int N, int* obs_ind);

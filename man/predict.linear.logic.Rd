@@ -4,7 +4,7 @@
 \alias{predict.linear.logic}
 \title{Prediction for \code{linear.logic} models}
 \usage{
-\method{predict}{linear.logic}(object, X, Z = NULL, ...)
+\method{predict}{linear.logic}(object, X, Z = NULL, s = NULL, ...)
 }
 \arguments{
 \item{object}{Fitted \code{linear.logic} model}
@@ -14,6 +14,10 @@ This object should correspond to the binary matrix for fitting the model.}
 
 \item{Z}{Optional quantitative covariables supplied as a matrix or
 data frame. Only used (and required) if the model was fitted using them.}
+
+\item{s}{Regularization parameter. Only used if \code{type = "lasso"} or
+\code{type = "cv.lasso"} was set. Only useful if the penalty saved in
+\code{object$s} should be overwritten.}
 
 \item{...}{Ignored additional parameters}
 }

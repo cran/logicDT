@@ -880,7 +880,9 @@ SEXP simulatedAnnealing_(SEXP X_train, SEXP y_train, SEXP max_vars_raw, SEXP max
 
     total_iter += i + 1;
 
-    if ((frozen_def && score_sd < 10e-10) || (!frozen_def && real_acc_ratio < frozen_acc_frac)) {
+    // frozen_def not needed for score_sd criterion,
+    // since score_sd = 0 implies real_acc_ratio = 0
+    if ((score_sd < 10e-10) || (!frozen_def && real_acc_ratio < frozen_acc_frac)) {
       frozen++;
       if (frozen >= frozen_markov_count)
         break;

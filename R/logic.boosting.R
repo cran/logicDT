@@ -39,6 +39,16 @@ logicDT.boosting <- function(X, ...) UseMethod("logicDT.boosting")
 #'   observed mean}
 #'   \item{\code{...}}{Supplied parameters of the functional call
 #'     to \code{\link{logicDT.boosting}}.}
+#' @references
+#' \itemize{
+#'   \item Lau, M., Schikowski, T. & Schwender, H. (2021).
+#'   logicDT: A Procedure for Identifying Response-Associated
+#'   Interactions Between Binary Predictors. To be submitted.
+#'   \item Friedman, J. H. (2001).
+#'   Greedy Function Approximation: A Gradient Boosting Machine.
+#'   The Annals of Statistics, 29(5), 1189–1232.
+#'   \doi{https://doi.org/10.1214/aos/1013203451}
+#' }
 #'
 #' @name logicDT.boosting
 #' @method logicDT.boosting default
@@ -276,21 +286,8 @@ bestBoostingIter <- function(model, X, y, Z = NULL, consec.iter = 5, scoring_rul
   boosting.iter <- length(model$models)
   partial.preds <- partial.predict(model, X, Z = Z, n.iter = boosting.iter)
   best.perf <- -Inf; k <- 0
-  if(model$y_bin) {
-    y <- as.integer(y)
-    if(scoring_rule == "deviance")
-      eval.performance <- function(preds, y) -calcDev(preds, y)
-    else if(scoring_rule == "brier")
-      eval.performance <- function(preds, y) -calcBrier(preds, y)
-    else if(scoring_rule == "nce")
-      eval.performance <- function(preds, y) 1-calcNCE(preds, y)
-    else
-      eval.performance <- function(preds, y) calcAUC(preds, y)
-  } else {
-    eval.performance <- function(preds, y) -calcMSE(preds, y)
-  }
   for(j in 1:boosting.iter) {
-    current.perf <- eval.performance(partial.preds[,j], y)
+    current.perf <- eval.performance(partial.preds[,j], y, scoring_rule)
     if(current.perf > best.perf) {
       best.perf <- current.perf; k <- 0
     } else {
@@ -302,11 +299,44 @@ bestBoostingIter <- function(model, X, y, Z = NULL, consec.iter = 5, scoring_rul
   return(best.iter)
 }
 
+eval.performance <- function(preds, y, scoring_rule) {
+  y_bin <- setequal(unique(y), c(0, 1))
+  if(y_bin) {
+    y <- as.integer(y)
+    if(scoring_rule == "deviance")
+      -calcDev(preds, y)
+    else if(scoring_rule == "brier")
+      -calcBrier(preds, y)
+    else if(scoring_rule == "nce")
+      1-calcNCE(preds, y)
+    else
+      calcAUC(preds, y)
+  } else {
+    -calcMSE(preds, y)
+  }
+}
+
 #' Linear models based on logic terms
 #'
 #' This function fits a linear or logistic regression model (based on the
 #' type of outcome) using the supplied logic terms, e.g., \code{$disj} from
 #' a fitted \code{logicDT} model.
+#'
+#' For creating sparse final models, the LASSO can be used for shrinking
+#' unnecessary term coefficients down to zero (\code{type = "lasso"}).
+#' If the complexity penalty \code{s} shall be automatically tuned,
+#' cross-validation can be employed (\code{type = "cv.lasso"}).
+#' However, since other hyperparameters also have to be tuned when fitting
+#' a linear boosting model such as the complexity penalty for restricting
+#' the number of variables in the terms, manually tuning the LASSO penalty
+#' together with the other hyperparameters is recommended.
+#' For every hyperparameter setting of the boosting itself, the best
+#' corresponding LASSO penalty \code{s} can be identified by, e.g., choosing
+#' the \code{s} that minimizes the validation data error.
+#' Thus, this hyperparameter does not have to be explicitly tuned via a grid
+#' search but is induced by the setting of the other hyperparameters.
+#' For finding the ideal value of \code{s} using independent validation data,
+#' the function \code{\link{get.ideal.penalty}} can be used.
 #'
 #' @param X Matrix or data frame of binary input data.
 #'   This object should correspond to the binary matrix for fitting the model.
@@ -320,13 +350,34 @@ bestBoostingIter <- function(model, X, y, Z = NULL, consec.iter = 5, scoring_rul
 #' @param Z.interactions Shall interactions with the continuous covariable
 #'   \code{Z} be taken into account by including products of the terms with
 #'   \code{Z}?
+#' @param type Type of linear model to be fitted. Either \code{"standard"}
+#'   (without regularization), \code{"lasso"} (LASSO) or \code{"cv.lasso"}
+#'   (LASSO with cross-validation for automatically configuring the complexity
+#'   penalty).
+#' @param s Regularization parameter. Only used if \code{type = "lasso"} is
+#'   set.
+#' @param ... Additional parameters passed to \code{glmnet} or \code{cv.glmnet}
+#'   if the corresponding model type was chosen.
 #' @return A \code{linear.logic} model. This is a list containing
 #'   the logic terms used as predictors in the model and the fitted \code{glm}
 #'   model.
+#' @references
+#' \itemize{
+#'   \item Tibshirani, R. (1996).
+#'   Regression Shrinkage and Selection via the Lasso. Journal of the Royal
+#'   Statistical Society. Series B (Methodological), 58(1), 267–288.
+#'   \doi{https://doi.org/10.1111/j.2517-6161.1996.tb02080.x}
+#'   \item Friedman, J., Hastie, T., & Tibshirani, R. (2010).
+#'   Regularization Paths for Generalized Linear Models via Coordinate Descent.
+#'   Journal of statistical software, 33(1), 1–22.
+#'   \doi{https://doi.org/10.18637/jss.v033.i01}
+#' }
 #'
 #' @importFrom stats glm gaussian binomial
+#' @importFrom glmnet cv.glmnet glmnet
 #' @export
-fitLinearLogicModel <- function(X, y, Z = NULL, disj, Z.interactions = TRUE) {
+fitLinearLogicModel <- function(X, y, Z = NULL, disj, Z.interactions = TRUE,
+                                type = "standard", s = NULL, ...) {
   y_bin <- setequal(unique(y), c(0, 1))
   X <- as.matrix(X)
   mode(X) <- "integer"
@@ -347,10 +398,23 @@ fitLinearLogicModel <- function(X, y, Z = NULL, disj, Z.interactions = TRUE) {
       dm <- cbind(dm, Z = Z)
     colnames(dm) <- paste("X", 1:ncol(dm), sep="")
   }
-  if(y_bin) fam <- binomial(link = "logit") else fam <- gaussian()
-  dat <- data.frame(y = y, dm)
-  lin.mod <- glm(y ~ ., data = dat, family = fam)
-  ret <- list(disj = disj, lin.mod = lin.mod, Z.interactions = Z.interactions)
+  if(type == "standard") {
+    if(y_bin) fam <- binomial(link = "logit") else fam <- gaussian()
+    dat <- data.frame(y = y, dm)
+    lin.mod <- glm(y ~ ., data = dat, family = fam)
+  } else if(type == "cv.lasso") {
+    if(y_bin) fam <- "binomial" else fam <- "gaussian"
+    if(ncol(dm) == 1) dm <- cbind(dm, 1)
+    # alpha = 1 (LASSO) is the default setting
+    lin.mod <- cv.glmnet(dm, y, family = fam, ...)
+    s <- lin.mod$lambda.1se
+  } else {
+    if(y_bin) fam <- "binomial" else fam <- "gaussian"
+    if(ncol(dm) == 1) dm <- cbind(dm, 1)
+    # alpha = 1 (LASSO) is the default setting
+    lin.mod <- glmnet(dm, y, family = fam, lambda = s, ...)
+  }
+  ret <- list(disj = disj, lin.mod = lin.mod, Z.interactions = Z.interactions, type = type, s = s)
   class(ret) <- "linear.logic"
   return(ret)
 }
@@ -365,14 +429,18 @@ fitLinearLogicModel <- function(X, y, Z = NULL, disj, Z.interactions = TRUE) {
 #'   This object should correspond to the binary matrix for fitting the model.
 #' @param Z Optional quantitative covariables supplied as a matrix or
 #'   data frame. Only used (and required) if the model was fitted using them.
+#' @param s Regularization parameter. Only used if \code{type = "lasso"} or
+#'   \code{type = "cv.lasso"} was set. Only useful if the penalty saved in
+#'   \code{object$s} should be overwritten.
 #' @param ... Ignored additional parameters
 #' @return A numeric vector of predictions. For binary outcomes,
 #'   this is a vector with estimates for
 #'   \eqn{P(Y=1 \mid X = x)}.
 #'
 #' @importFrom stats predict.glm
+#' @importFrom glmnet predict.glmnet
 #' @export
-predict.linear.logic <- function(object, X, Z = NULL, ...) {
+predict.linear.logic <- function(object, X, Z = NULL, s = NULL, ...) {
   X <- as.matrix(X)
   mode(X) <- "integer"
 
@@ -391,7 +459,20 @@ predict.linear.logic <- function(object, X, Z = NULL, ...) {
       dm <- cbind(dm, Z = Z)
     colnames(dm) <- paste("X", 1:ncol(dm), sep="")
   }
-  as.numeric(predict(object$lin.mod, data.frame(dm), type = "response"))
+
+  if(is.null(s)) s <- object$s
+
+  if(object$type == "standard")
+    as.numeric(predict(object$lin.mod, data.frame(dm), type = "response"))
+  else if(object$type == "cv.lasso") {
+    if(ncol(dm) == 1) dm <- cbind(dm, 1)
+    ret <- predict(object$lin.mod, dm, type = "response", s = s)
+    if(ncol(ret) == 1) as.numeric(ret) else ret
+  } else {
+    if(ncol(dm) == 1) dm <- cbind(dm, 1)
+    ret <- predict(object$lin.mod, dm, type = "response", s = s)
+    if(ncol(ret) == 1) as.numeric(ret) else ret
+  }
 }
 
 #' Linear models based on boosted models
@@ -405,14 +486,25 @@ predict.linear.logic <- function(object, X, Z = NULL, ...) {
 #' the covariable itself as well as products of the covariable with the
 #' extracted logic terms are included as predictors in the regression model.
 #'
+#' For more details on the possible types of linear models, see
+#' \code{\link{fitLinearLogicModel}}.
+#'
 #' @param model Fitted \code{logic.boosted} model
 #' @param n.iter Number of boosting iterations to be used
+#' @param type Type of linear model to be fitted. Either \code{"standard"}
+#'   (without regularization), \code{"lasso"} (LASSO) or \code{"cv.lasso"}
+#'   (LASSO with cross-validation for automatically configuring the complexity
+#'   penalty).
+#' @param s Regularization parameter. Only used if \code{type = "lasso"} is
+#'   set.
+#' @param ... Additional parameters passed to \code{glmnet} or \code{cv.glmnet}
+#'   if the corresponding model type was chosen.
 #' @return A \code{linear.logic} model. This is a list containing
 #'   the logic terms used as predictors in the model and the fitted \code{glm}
 #'   model.
 #'
 #' @export
-fitLinearBoostingModel <- function(model, n.iter) {
+fitLinearBoostingModel <- function(model, n.iter, type = "standard", s = NULL, ...) {
   new.disj <- model$models[[1]]$disj
   max_vars <- ncol(new.disj)
   if(n.iter > 1) {
@@ -431,7 +523,10 @@ fitLinearBoostingModel <- function(model, n.iter) {
   new.disj <- new.disj[!duplicated(new.disj),,drop=FALSE]
   mode(new.disj) <- "integer"
 
-  return(fitLinearLogicModel(model$X, model$y, Z = model$Z, disj = new.disj, Z.interactions = TRUE))
+  NA.ind <- which(rowSums(!is.na(new.disj)) == 0)
+  if(length(NA.ind) > 0) new.disj <- new.disj[-NA.ind,,drop=FALSE]
+
+  return(fitLinearLogicModel(model$X, model$y, Z = model$Z, disj = new.disj, Z.interactions = TRUE, type = type, s = s, ...))
 }
 
 #' Gene-environment (GxE) interaction test based on boosted linear models
@@ -461,12 +556,18 @@ fitLinearBoostingModel <- function(model, n.iter) {
 #' @importFrom stats anova
 #' @export
 gxe.test.boosting <- function(model, X, y, Z) {
-  if(class(model) != "linear.logic") stop("The supplied model has to be of class 'linear.logic'!")
+  if(!inherits(model, "linear.logic")) stop("The supplied model has to be of class 'linear.logic'!")
 
-  mod.complete <- fitLinearLogicModel(X, y, Z, model$disj, Z.interactions = TRUE)
-  mod.reduced <- fitLinearLogicModel(X, y, Z, model$disj, Z.interactions = FALSE)
+  if(model$type == "standard") {
+    mod.complete <- fitLinearLogicModel(X, y, Z, model$disj, Z.interactions = TRUE, type = "standard")$lin.mod
+    mod.reduced <- fitLinearLogicModel(X, y, Z, model$disj, Z.interactions = FALSE, type = "standard")$lin.mod
+  } else {
+    included.vars <- get.included.vars(model)
+    mod.complete <- fitRestrictedLinearLogicModel(X, y, Z, included.vars$main.disj, included.vars$Z.disj)
+    mod.reduced <- fitRestrictedLinearLogicModel(X, y, Z, included.vars$main.disj, NULL)
+  }
 
-  res <- anova(mod.reduced$lin.mod, mod.complete$lin.mod, test="LRT")
+  res <- anova(mod.reduced, mod.complete, test="LRT")
   ret <- list(Deviance = res$Deviance[2], p.value = res$`Pr(>Chi)`[2])
   return(ret)
 }
@@ -509,27 +610,156 @@ gxe.test.boosting <- function(model, X, y, Z) {
 #' @importFrom stats anova
 #' @export
 importance.test.boosting <- function(model, X, y, Z, Z.interactions = TRUE) {
-  if(class(model) != "linear.logic") stop("The supplied model has to be of class 'linear.logic'!")
+  if(!inherits(model, "linear.logic")) stop("The supplied model has to be of class 'linear.logic'!")
 
-  Z.here <- length(model$lin.mod$coefficients) > (nrow(model$disj) + 1)
-  disj <- model$disj
-  n_terms <- nrow(disj)
-  mod.complete <- fitLinearLogicModel(X, y, Z, disj, Z.interactions = Z.interactions)
+  if(model$type == "standard") {
+    disj <- model$disj
+    n_terms <- nrow(disj)
+    mod.complete <- fitLinearLogicModel(X, y, Z, disj, Z.interactions = Z.interactions, type = "standard")$lin.mod
+  } else {
+    included.vars <- get.included.vars(model)
+    if(!Z.interactions) included.vars$Z.disj <- NULL
+    main.disj <- included.vars$main.disj; Z.disj <- included.vars$Z.disj
+
+    disj <- unique(rbind(main.disj, Z.disj))
+    n_terms <- nrow(disj)
+
+    mod.complete <- fitRestrictedLinearLogicModel(X, y, Z, main.disj, Z.disj)
+  }
 
   vims <- data.frame(matrix(nrow = n_terms, ncol = 3))
   colnames(vims) <- c("var", "vim", "p.value")
+  if(n_terms == 0) return(vims)
   real_disj <- translateLogicPET(disj, X)
   vims$var <- getPredictorNames(real_disj, sort_conj = TRUE)
   vims$vim <- 0 -> vims$p.value
 
   for(i in 1:n_terms) {
-    mod.reduced <- fitLinearLogicModel(X, y, Z, disj[-i,,drop=FALSE], Z.interactions = Z.interactions)
-    res <- anova(mod.reduced$lin.mod, mod.complete$lin.mod, test="LRT")
+    if(model$type == "standard") {
+      mod.reduced <- fitLinearLogicModel(X, y, Z, disj[-i,,drop=FALSE], Z.interactions = Z.interactions, type = "standard")$lin.mod
+    } else {
+      main.rem <- which(apply(main.disj, 1, function(x) all.equal(x, disj[i,])) == "TRUE")
+      if(length(main.rem) > 0)
+        main.disj.rem <- main.disj[-main.rem,,drop=FALSE]
+      else
+        main.disj.rem <- main.disj
+
+      if(!is.null(Z.disj)) {
+        Z.rem <- which(apply(Z.disj, 1, function(x) all.equal(x, disj[i,])) == "TRUE")
+        if(length(Z.rem) > 0)
+          Z.disj.rem <- Z.disj[-Z.rem,,drop=FALSE]
+        else
+          Z.disj.rem <- Z.disj
+      } else {
+        Z.disj.rem <- NULL
+      }
+
+      mod.reduced <- fitRestrictedLinearLogicModel(X, y, Z, main.disj.rem, Z.disj.rem)
+    }
+
+    res <- anova(mod.reduced, mod.complete, test="LRT")
     vims$vim[i] <- res$Deviance[2]
     vims$p.value[i] <- res$`Pr(>Chi)`[2]
   }
 
   return(vims)
+}
+
+#' Tuning the LASSO regularization parameter
+#'
+#' This function takes a fitted \code{linear.logic} model and independent
+#' validation data as input for finding the ideal LASSO complexity penalty
+#' \code{s}.
+#'
+#' @param model A fitted \code{linear.logic} model (i.e., a model created via
+#'   \code{\link{fitLinearLogicModel}} or \code{\link{fitLinearBoostingModel}})
+#' @param X Matrix or data frame of binary input data.
+#'   This object should correspond to the binary matrix for fitting the model.
+#' @param y Response vector. 0-1 coding for binary outcomes.
+#' @param Z Optional quantitative covariables supplied as a matrix or
+#'   data frame. Only used (and required) if the model was fitted using them.
+#' @param scoring_rule The scoring rule for evaluating the validation
+#'   error and its standard error. For classification tasks, \code{"deviance"}
+#'   or \code{"Brier"} should be used.
+#' @param choose Model selection scheme. If the model that minimizes the
+#'   validation error should be chosen, \code{choose = "min"} should be
+#'   set. Otherwise, \code{choose = "1se"} leads to simplest model in the range
+#'   of one standard error of the minimizing model.
+#' @return A list containing
+#'   \item{\code{val.res}}{A data frame containing the penalties, the
+#'   validation scores and the corresponding standard errors}
+#'   \item{\code{best.s}}{The ideal penalty value}
+#'
+#' @export
+get.ideal.penalty <- function(model, X, y, Z = NULL, scoring_rule = "deviance", choose = "min") {
+  if(model$type != "lasso") stop("Only applicable for LASSO fits!")
+  lambda <- model$lin.mod$lambda
+  beta <- model$lin.mod$beta
+  preds <- predict(model, X, Z = Z)
+  y_bin <- setequal(unique(y), c(0, 1))
+  if(!y_bin) scoring_rule <- "mse"
+
+  val.res <- data.frame()
+  for(i in 1:ncol(beta)) {
+    scores <- calcScorePerObservation(as.numeric(preds[,i]), y, scoring_rule)
+    m <- mean(scores)
+    se <- sd(scores)/sqrt(length(scores))
+    val.res <- rbind(val.res, data.frame(s = lambda[i], score = m, se = se, score.plus.1se = m + se))
+  }
+
+  min.ind <- min(which(val.res$score == min(val.res$score)))
+  if(choose == "1se") {
+    max.val <- val.res$score.plus.1se[min.ind]
+    min.ind <- min(which(val.res$score <= max.val))
+  }
+
+  best.s <- lambda[min.ind]
+  return(list(val.res = val.res, best.s = best.s))
+}
+
+get.included.vars <- function(model) {
+  if(is.null(model$s)) stop("The regularization parameter $s has to be properly set!")
+  lin.mod <- model$lin.mod
+  if(model$type == "cv.lasso") lin.mod <- lin.mod$glmnet.fit
+  lambda.ind <- match(model$s, lin.mod$lambda)[1]
+  beta <- as.numeric(lin.mod$beta[,lambda.ind])
+
+  n_conj <- sum(rowSums(!is.na(model$disj)) > 0)
+  main.disj <- model$disj[beta[1:n_conj] != 0,,drop=FALSE]
+  Z.disj <- NULL
+  if(length(beta) > n_conj + 1)
+    Z.disj <- model$disj[beta[(n_conj+1):(2*n_conj)] != 0,,drop=FALSE]
+
+  return(list(main.disj = main.disj, Z.disj = Z.disj))
+}
+
+fitRestrictedLinearLogicModel <- function(X, y, Z = NULL, main.disj, Z.disj) {
+  y_bin <- setequal(unique(y), c(0, 1))
+  X <- as.matrix(X)
+  mode(X) <- "integer"
+  mode(main.disj) <- "integer"
+  dm <- getDesignMatrix(X, main.disj)
+
+  Z.interactions <- !is.null(Z.disj) && nrow(Z.disj) > 0 && !is.null(Z)
+  if(Z.interactions) mode(Z.disj) <- "integer"
+
+  if(!is.null(Z)) {
+    Z <- as.numeric(as.matrix(Z))
+    if(Z.interactions)
+      dm <- cbind(dm, getDesignMatrix(X, Z.disj) * Z, Z = Z)
+    else
+      dm <- cbind(dm, Z = Z)
+  }
+
+  if(nrow(main.disj) > 0)
+    colnames(dm)[1:nrow(main.disj)] <- paste("X", 1:nrow(main.disj), sep="")
+  if(Z.interactions)
+    colnames(dm)[(nrow(main.disj)+1):(nrow(main.disj)+nrow(Z.disj))] <- paste("Z", 1:nrow(Z.disj), sep="")
+
+  if(y_bin) fam <- binomial(link = "logit") else fam <- gaussian()
+  dat <- data.frame(y = y, dm)
+  lin.mod <- glm(y ~ ., data = dat, family = fam)
+  return(lin.mod)
 }
 
 

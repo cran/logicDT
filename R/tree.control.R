@@ -110,8 +110,15 @@ tree.control <- function(nodesize = 10, split_criterion = "gini", alpha = 0.05, 
     covariable <- -1
   else
     covariable <- 0
+
+  if(covariable == 0 && split_criterion > 0)
+    covariable <- split_criterion + 1
+
   covariable_search <- max(covariable, 0)
   covariable_final <- abs(covariable)
+  # Logistic models instead of LDA models in the final fitting:
+  if(covariable_final == 3)
+    covariable_final <- 4
   tc <- list(nodesize = as.integer(nodesize),
              split_criterion = as.integer(split_criterion), alpha = as.numeric(alpha),
              cp = as.numeric(cp), cp_orig = as.numeric(cp),

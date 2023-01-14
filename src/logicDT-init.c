@@ -1,5 +1,6 @@
 #include "sa-greedy.h"
 #include "gxe-test.h"
+#include "pruning.h"
 #include <R_ext/Rdynload.h>
 
 void R_init_logicDT(DllInfo *info) {
@@ -17,6 +18,8 @@ void R_init_logicDT(DllInfo *info) {
   R_RegisterCCallable("logicDT", "fit4plModel_",  (DL_FUNC) &fit4plModel_);
   R_RegisterCCallable("logicDT", "fit4plModelWithGroups_",  (DL_FUNC) &fit4plModelWithGroups_);
   R_RegisterCCallable("logicDT", "fitLinearModel_",  (DL_FUNC) &fitLinearModel_);
+  R_RegisterCCallable("logicDT", "prune_",  (DL_FUNC) &prune_);
+  R_RegisterCCallable("logicDT", "simplifyTree_",  (DL_FUNC) &simplifyTree_);
 
   R_registerRoutines(info, NULL, NULL, NULL, NULL);
   R_useDynamicSymbols(info, TRUE);

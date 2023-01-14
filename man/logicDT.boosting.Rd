@@ -76,3 +76,14 @@ Function for fitting gradient boosted logicDT models.
 \details{
 Details on single logicDT models can be found in \code{\link{logicDT}}.
 }
+\references{
+\itemize{
+  \item Lau, M., Schikowski, T. & Schwender, H. (2021).
+  logicDT: A Procedure for Identifying Response-Associated
+  Interactions Between Binary Predictors. To be submitted.
+  \item Friedman, J. H. (2001).
+  Greedy Function Approximation: A Gradient Boosting Machine.
+  The Annals of Statistics, 29(5), 1189–1232.
+  \doi{https://doi.org/10.1214/aos/1013203451}
+}
+}

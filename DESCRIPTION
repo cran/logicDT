@@ -1,7 +1,7 @@
 Package: logicDT
 Type: Package
 Title: Identifying Interactions Between Binary Predictors
-Version: 1.0.2
+Version: 1.0.3
 Authors@R: person("Michael", "Lau", email = "michael.lau@hhu.de",
   role = c("aut", "cre"), comment = c(ORCID = "0000-0002-5327-8351"))
 Description: A global statistical learning method
@@ -14,11 +14,11 @@ Description: A global statistical learning method
   local four parameter logistic models.
 License: MIT + file LICENSE
 Encoding: UTF-8
-Imports: graphics, stats, utils
+Imports: glmnet, graphics, stats, utils
 RoxygenNote: 7.1.2
 NeedsCompilation: yes
-Packaged: 2022-04-25 19:44:28 UTC; Michael
+Packaged: 2023-01-14 12:46:03 UTC; Lau
 Author: Michael Lau [aut, cre] (<https://orcid.org/0000-0002-5327-8351>)
 Maintainer: Michael Lau <michael.lau@hhu.de>
 Repository: CRAN
-Date/Publication: 2022-04-26 11:20:02 UTC
+Date/Publication: 2023-01-14 13:00:02 UTC
