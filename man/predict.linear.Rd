@@ -7,7 +7,7 @@
 \method{predict}{linear}(object, Z, ...)
 }
 \arguments{
-\item{object}{Fitted linear model}
+\item{object}{Fitted \code{linear} model}
 
 \item{Z}{Numeric vector of new input samples}
 

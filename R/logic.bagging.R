@@ -13,14 +13,14 @@ logicDT.bagging <- function(X, ...) UseMethod("logicDT.bagging")
 #'  Otherwise, a regression task is assumed.
 #' @param Z Optional matrix or data frame of quantitative/continuous
 #'   covariables. Multiple covariables allowed for splitting the trees.
-#'   If four parameter logistic models shall be fitted in the leaves,
-#'   only the first given covariable is used.
+#'   If leaf regression models (such as four parameter logistic models) shall
+#'   be fitted, only the first given covariable is used.
 #' @param bagging.iter Number of bagging iterations
 #' @param ... Arguments passed to \code{logicDT}
 #' @return An object of class \code{logic.bagged}. This is a list
 #'   containing
-#'   \item{\code{models}}{A list of fitted logicDT models}
-#'   \item{\code{bags}}{A list of observations indices which were
+#'   \item{\code{models}}{A list of fitted \code{logicDT} models}
+#'   \item{\code{bags}}{A list of observation indices which were
 #'   used to train each model}
 #'   \item{\code{...}}{Supplied parameters of the functional call
 #'     to \code{\link{logicDT.bagging}}.}

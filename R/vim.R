@@ -72,7 +72,7 @@ vim_adjusted <- function(model, scoring_rule, vim_type, interaction_order, nodes
     }
   }
 
-  # Post-hoc adjustment for identifying concrete conjunctions
+  # Post-hoc adjustment for identifying specific conjunctions
   # (e.g., X_1^c & X_2 instead of X_1 & X_2)
   # Due to the issue of inverting conjunctions such as
   # (X_1 & X_2)^c & X_3, they can also be inverted as a whole
@@ -318,18 +318,17 @@ calcScore <- function(preds, y, scoring_rule) {
 #' Details on the calculation of these VIMs are given below.
 #'
 #' By variable importance, importance of identified logic terms
-#' is meant. These terms can also be single predictors but also
-#' conjunctions in the spirit of this software package.
+#' is meant. These terms can be single predictors or
+#' conjunctions between predictors in the spirit of this software package.
 #'
-#' @section Permutation VIMs:
+#' @section Permutation VIMs (Breiman & Cutler, 2003):
 #' Permutation VIMs are computed by comparing the the model's
 #' performance using the original data and data with random
-#' permutations of single terms. This approach was originally
-#' proposed by Breiman & Cutler (2003).
+#' permutations of single terms.
 #'
 #' @section Removal VIMs:
-#' Removal VIMs are constructed removing specific logic
-#' term from the set of predictors, refitting the decision
+#' Removal VIMs are constructed by removing specific logic
+#' terms from the set of predictors, refitting the decision
 #' tree and comparing the performance to the original model.
 #' Thus, this approach requires that at least two terms were
 #' found by the algorithm. Therefore, no VIM will be
@@ -338,20 +337,20 @@ calcScore <- function(preds, y, scoring_rule) {
 #' use the constant mean response model for approximating
 #' the empty model.
 #'
-#' @section Logic VIMs:
+#' @section Logic VIMs (Lau et al., 2024):
 #' Logic VIMs use the fact that Boolean conjunctions are
 #' Boolean variables themselves and therefore are equal to
 #' 0 or 1. To compute the VIM for a specific term,
 #' predictions are performed once for this term fixed to
 #' 0 and once for this term fixed to 1. Then, the arithmetic
 #' mean of these two (risk or regression) predictions is
-#' is used for calculating the performance. This performance
+#' used for calculating the performance. This performance
 #' is then compared to the original one as in the other
-#' VIM approaches (average = "before"). Alternatively,
+#' VIM approaches (\code{average = "before"}). Alternatively,
 #' predictions for each fixed 0-1 scenario of the considered
 #' term can be performed leading to individual performances
 #' which then are averaged and compared to the original
-#' performance (average = "after").
+#' performance (\code{average = "after"}).
 #'
 #' @section Validation:
 #' Validation data sets which
@@ -362,10 +361,10 @@ calcScore <- function(preds, y, scoring_rule) {
 #' the model.
 #'
 #' @section Bagging:
-#' For the bagging version, out of bag (OOB) data are naturally
+#' For the bagging version, out-of-bag (OOB) data are naturally
 #' used for the calculation of VIMs.
 #'
-#' @section VIM Adjustment for Interactions:
+#' @section VIM Adjustment for Interactions (Lau et al., 2024):
 #' Since decision trees can naturally include interactions
 #' between single predictors (especially when strong marginal
 #' effects are present as well), logicDT models might, e.g.,
@@ -397,7 +396,7 @@ calcScore <- function(preds, y, scoring_rule) {
 #' \sum_{\lbrace j_1, \ldots, j_l \rbrace \subseteq \lbrace i_1, \ldots, i_k \rbrace}
 #' (-1)^{k-l} \cdot \mathrm{VIM}(X_{j_1}, \ldots, X_{j_l} \mid X \setminus Z).}
 #'
-#' @section Identification of Concrete Conjunctions:
+#' @section Identification of Specific Conjunctions (Lau et al., 2024):
 #' The aforementioned VIM adjustment approach only captures the importance
 #' of a general definition of interactions, i.e., it just considers
 #' the question whether some variables do interact in any way.
@@ -425,8 +424,8 @@ calcScore <- function(preds, y, scoring_rule) {
 #' @param model The fitted \code{logicDT} or \code{logic.bagged}
 #'   model
 #' @param scoring_rule The scoring rule for assessing the model
-#'   performance. As in \code{\link{logicDT}}, "auc", "nce",
-#'   "deviance" and "brier" are possible for binary outcomes.
+#'   performance. As in \code{\link{logicDT}}, \code{"auc"}, \code{"nce"},
+#'   \code{"deviance"} and \code{"brier"} are possible for binary outcomes.
 #'   For regression, the mean squared error is used.
 #' @param vim_type The type of VIM to be calculated. This can
 #'   either be \code{"logic"}, \code{"remove"} or
@@ -442,7 +441,7 @@ calcScore <- function(preds, y, scoring_rule) {
 #'   considered? Similar to \code{conjsize} in \code{\link{logicDT}}
 #'   and \code{nodesize} in \code{\link{tree.control}}.
 #' @param alpha If \code{adjust = TRUE}, a further adjustment can be
-#'   performed trying to identify the concrete conjunctions responsible
+#'   performed trying to identify the specific conjunctions responsible
 #'   for the interaction of the considered binary predictors.
 #'   \code{alpha} specifies the significance level for statistical tests
 #'   testing the alternative of a difference in the response for specific
@@ -459,18 +458,19 @@ calcScore <- function(preds, y, scoring_rule) {
 #'   VIMs.
 #'   Preferably some type of validation
 #'   data independent of the training data.
-#' @param leaves The prediction mode if 4pL models were fitted
-#'   in the leaves. As in \code{\link{predict.logicDT}},
-#'   "4pl" and "constant" are the possible settings.
+#' @param leaves The prediction mode if regression models (such as 4pL models)
+#'   were fitted in the leaves. As in \code{\link{predict.logicDT}},
+#'   \code{"4pl"} and \code{"constant"} are the possible settings.
 #' @param ... Parameters passed to the different VIM type functions.
 #'   For \code{vim_type = "logic"}, the argument \code{average} can
 #'   be specified as \code{"before"} or \code{"after"}. For
 #'   \code{vim_type = "permutation"}, \code{n.perm} can be set to
-#'   the number of random permutations. See below for details.
+#'   the number of random permutations.
 #'   For \code{vim_type = "remove"}, \code{empty.model} can be specified
 #'   as either \code{"none"} ignoring empty models with all predictive
 #'   terms removed or \code{"mean"} using the response mean as prediction
 #'   in the case of an empty model.
+#'   See below for details.
 #' @return A data frame with two columns:
 #'   \item{\code{var}}{Short descriptions of the terms for which the
 #'     importance was measured. For example \code{-X1^X2} for
@@ -480,6 +480,10 @@ calcScore <- function(preds, y, scoring_rule) {
 #'
 #' @references
 #' \itemize{
+#'   \item Lau, M., Schikowski, T. & Schwender, H. (2024).
+#'     logicDT: A procedure for identifying response-associated
+#'     interactions between binary predictors. Machine Learning 113(2):933–992.
+#'     \doi{https://doi.org/10.1007/s10994-023-06488-6}
 #'   \item Breiman, L. (2001). Random Forests. Machine Learning 45(1):5-32.
 #'     \doi{https://doi.org/10.1023/A:1010933404324}
 #'   \item Breiman, L. & Cutler, A. (2003). Manual on Setting Up, Using,

@@ -10,7 +10,7 @@
 #'   \item \code{fancy = TRUE} plots a tree similar to those in the \code{rpart}
 #'   (Therneau and Atkinson, 2019) and \code{splinetree} (Neufeld and Heggeseth,
 #'   2019) \code{R} packages. The trees are drawn in an angular manner and
-#'   if 4pL modeling was used for the leaves, appropriate plots of the fitted
+#'   if leaf regression models were fitted, appropriate plots of the fitted
 #'   curves are depicted in the leaves. Otherwise, the usual prediction values
 #'   are shown.
 #' }
@@ -24,6 +24,8 @@
 #' @param margin_scaler Margin factor. Smaller values lead to smaller
 #'   margins.
 #' @param cex Scaling factor for the plotted text elements.
+#' @param cdot Should a centered dot be used instead of a logical and
+#'   for depicting interactions?
 #' @param ... Arguments passed to fancy plotting function
 #' @return No return value, called for side effects
 #'
@@ -38,9 +40,10 @@
 #'
 #' @importFrom graphics par plot lines rect text strwidth strheight
 #' @export
-plot.logicDT <- function(x, fancy = TRUE, x_scaler = 0.5, margin_scaler = 0.2, cex = 1, ...) {
+plot.logicDT <- function(x, fancy = TRUE, x_scaler = 0.5, margin_scaler = 0.2,
+                         cex = 1, cdot = FALSE, ...) {
   model <- x
-  if(fancy) return(fancy.plot(model, ...))
+  if(fancy) return(fancy.plot(model, cdot = cdot, ...))
 
   pet <- model$pet
   splits <- pet[[1]]
@@ -97,7 +100,7 @@ plot.logicDT <- function(x, fancy = TRUE, x_scaler = 0.5, margin_scaler = 0.2, c
   plot(c(min(x_layers) - x_margin, max(x_layers) + x_margin), c(0-y_margin, max(y_layers)+y_margin), type = "n", axes = FALSE, xlab = "", ylab = "",
                  xaxs="i", yaxs="i")
 
-  splits4 <- printable.splits(splits, splits_bin_or_cont, X)
+  splits4 <- printable.splits(splits, splits_bin_or_cont, X, cdot = cdot)
 
   for(i in 1:number_of_nodes) {
     if(splits[i] != "<leaf>") {
@@ -170,7 +173,7 @@ plot.logicDT <- function(x, fancy = TRUE, x_scaler = 0.5, margin_scaler = 0.2, c
   }
 }
 
-printable.splits <- function(splits, splits_bin_or_cont, X) {
+printable.splits <- function(splits, splits_bin_or_cont, X, cdot = FALSE) {
   splits2 <- strsplit(splits, "^", fixed=TRUE)
   splits3 <- lapply(splits2, function(x) ifelse(startsWith(x, "-"), substring(x, 2), x))
   splits3 <- lapply(splits3, function(x) ifelse(x == "<leaf>", "0", x))
@@ -188,12 +191,20 @@ printable.splits <- function(splits, splits_bin_or_cont, X) {
       for(j in 1:length(splits3[[i]])) {
         if(splitsm[[i]][j]) {
           splits4[[i]][j] <- paste(splits3[[i]][j], "^c", sep="")
+          # splits4[[i]][j] <- paste("!", splits3[[i]][j], sep="")
+          # splits4[[i]][j] <- tryCatch(parse(text=paste("symbol(\330)~ ", splits3[[i]][j], sep="")),
+          #                             error=function(cond) paste("!", splits3[[i]][j], sep=""))
         }
       }
     }
   }
-  splits4 <- tryCatch(lapply(splits4, function(x) parse(text=paste(x, collapse = " ~symbol(\331)~ "))),
-                      error=function(cond) lapply(splits4, function(x) parse(text=paste(x, collapse = " ~AND~ "))))
+  if(cdot) {
+    splits4 <- tryCatch(lapply(splits4, function(x) parse(text=paste(x, collapse = " %.% "))),
+                        error=function(cond) lapply(splits4, function(x) parse(text=paste(x, collapse = " * "))))
+  } else {
+    splits4 <- tryCatch(lapply(splits4, function(x) parse(text=paste(x, collapse = " ~symbol(\331)~ "))),
+                        error=function(cond) lapply(splits4, function(x) parse(text=paste(x, collapse = " ~AND~ "))))
+  }
   splits4
 }
 

@@ -7,7 +7,7 @@
 \method{predict}{`4pl`}(object, Z, ...)
 }
 \arguments{
-\item{object}{Fitted 4pl model}
+\item{object}{Fitted \code{4pl} model}
 
 \item{Z}{Numeric vector of new input samples}
 

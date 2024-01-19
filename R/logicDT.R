@@ -93,8 +93,8 @@ logicDT <- function(X, ...) UseMethod("logicDT")
 #'
 #' @section Saving and Loading:
 #' logicDT models can be saved and loaded using \code{save(...)} and
-#'   \code{load(...)}. The internal C structures will not be saved
-#'   but rebuilt from the R representations if necessary.
+#'   \code{load(...)}. The internal \code{C} structures will not be saved
+#'   but rebuilt from the \code{R} representations if necessary.
 #'
 #' @param X Matrix or data frame of binary predictors coded as 0 or 1.
 #' @param y Response vector. 0-1 coding for binary responses.
@@ -102,24 +102,24 @@ logicDT <- function(X, ...) UseMethod("logicDT")
 #' @param max_vars Maximum number of predictors in the set of predictors.
 #'   For the set \eqn{[X_1 \land X_2^c, X_1 \land X_3]}, this parameter
 #'   is equal to 4.
-#' @param max_conj Maximum number of input variables for the decision
-#'   trees. For the set \eqn{[X_1 \land X_2^c, X_1 \land X_3]}, this
+#' @param max_conj Maximum number of conjunctions/input variables for the
+#'   decision trees. For the set \eqn{[X_1 \land X_2^c, X_1 \land X_3]}, this
 #'   parameter is equal to 2.
 #' @param Z Optional matrix or data frame of quantitative/continuous
 #'   covariables. Multiple covariables allowed for splitting the trees.
-#'   If four parameter logistic models shall be fitted in the leaves,
-#'   only the first given covariable is used.
+#'   If leaf regression models (such as four parameter logistic models) shall
+#'   be fitted, only the first given covariable is used.
 #' @param search_algo Search algorithm for guiding the global search.
-#'   This can either be "sa" for simulated annealing, "greedy" for a
-#'   greedy search or "gp" for genetic programming.
+#'   This can either be \code{"sa"} for simulated annealing, \code{"greedy"}
+#'   for a greedy search or \code{"gp"} for genetic programming.
 #' @param cooling_schedule Cooling schedule parameters if simulated
 #'   annealing is used. The required object should be created via
 #'   the function \code{\link{cooling.schedule}}.
 #' @param scoring_rule Scoring rule for guiding the global search.
-#'   This can either be "auc" for the area under the receiver
+#'   This can either be \code{"auc"} for the area under the receiver
 #'   operating characteristic curve (default for binary reponses),
-#'   "deviance" for the deviance, "nce" for the normalized cross entropy
-#'   or "brier" for the Brier score.
+#'   \code{"deviance"} for the deviance, \code{"nce"} for the normalized cross
+#'   entropy or \code{"brier"} for the Brier score.
 #'   For regression purposes, the MSE (mean squared error) is
 #'   automatically chosen.
 #' @param tree_control Parameters controlling the fitting of
@@ -134,30 +134,30 @@ logicDT <- function(X, ...) UseMethod("logicDT")
 #'   logicDT models, instead, the model complexity parameters \code{max_vars}
 #'   and \code{max_conj} should be tuned.
 #' @param simplify Should the final fitted model be simplified?
-#'   This means, that unnecessary terms as a whole ("conj") will
+#'   This means, that unnecessary terms as a whole (\code{"conj"}) will
 #'   be removed if they cannot improve the score.
-#'   simplify = "vars" additionally tries to prune individual
+#'   \code{simplify = "vars"} additionally tries to prune individual
 #'   conjunctions by removing unnecessary variables in those.
-#'   simplify = "none" will not modify the final model.
-#' @param val_method Inner validation method. "rv" leads to a
-#'   repeated validation where val_reps times the original data
+#'   \code{simplify = "none"} will not modify the final model.
+#' @param val_method Inner validation method. \code{"rv"} leads to a
+#'   repeated validation where \code{val_reps} times the original data
 #'   set is divided into \eqn{\texttt{val\_frac} \cdot 100\%} validation
 #'   data and \eqn{(1-\texttt{val\_frac}) \cdot 100\%} training data.
-#'   "bootstrap" draws bootstrap samples and uses the out-of-bag
-#'   data as validation data. "cv" employs cross-validation with
-#'   val_reps folds.
-#' @param val_frac Only used if val_method = "rv". See description
-#'   of val_method.
+#'   \code{"bootstrap"} draws bootstrap samples and uses the out-of-bag
+#'   data as validation data. \code{"cv"} employs cross-validation with
+#'   \code{val_reps} folds.
+#' @param val_frac Only used if \code{val_method = "rv"}. See description
+#'   of \code{val_method}.
 #' @param val_reps Number of inner validation partitionings.
 #' @param allow_conj_removal Should it be allowed to remove
 #'   complete terms/conjunctions in the search?
-#'   If exact numbers of terms are aimed at, this should be set
-#'   to FALSE. If extensive hyperparameter optimizations are
-#'   feasible, allow_conj_removal = FALSE with a proper search
-#'   over max_vars and max_conj is advised for fitting single
-#'   models. For bagging or boosting with a greedy search,
-#'   allow_conj_removal = TRUE together with a small number for
-#'   max_vars = max_conj is recommended, e.g., 2 or 3.
+#'   If a model with the specified exact number of terms is desired,
+#'   this should be set to \code{FALSE}. If extensive hyperparameter
+#'   optimizations are feasible, \code{allow_conj_removal = FALSE} with a
+#'   proper search over \code{max_vars} and \code{max_conj} is advised for
+#'   fitting single models. For bagging or boosting with a greedy search,
+#'   \code{allow_conj_removal = TRUE} together with a small number for
+#'   \code{max_vars = max_conj} is recommended, e.g., 2 or 3.
 #' @param conjsize The minimum of training samples that have to
 #'   belong to a conjunction. This parameters prevents including
 #'   unnecessarily complex conjunctions that rarely occur.
@@ -167,35 +167,37 @@ logicDT <- function(X, ...) UseMethod("logicDT")
 #'   Speeds up the greedy search but can lead to inferior results.
 #' @param greedy_mod Should modifications of conjunctions be
 #'   considered in a greedy search?
-#'   Speeds up the greedy search but can lead to inferior results.
+#'   \code{greedy_mod = FALSE} speeds up the greedy search but can
+#'   lead to inferior results.
 #' @param greedy_rem Should the removal of conjunctions be
 #'   considered in a greedy search?
-#'   Speeds up the greedy search but can lead to inferior results.
+#'   \code{greedy_rem = FALSE} speeds up the greedy search but can
+#'   lead to inferior results.
 #' @param max_gen Maximum number of generations for genetic
 #'   programming.
 #' @param gp_sigma Parameter \eqn{\sigma} for fitness sharing in
 #'   genetic programming. Very small values (e.g., 0.001) are
-#'   recommended leading to only penalizing models with yield
+#'   recommended leading to only penalizing models which yield
 #'   the exact same score.
 #' @param gp_fs_interval Interval for fitness sharing in
 #'   genetic programming. The fitness calculation can be
 #'   computationally expensive if many models exist in one
-#'   generation. gp_fs_interval = 10 leads to performing
+#'   generation. \code{gp_fs_interval = 10} leads to performing
 #'   fitness sharing only every 10th generation.
 #' @return An object of class \code{logicDT}. This is a list
 #'   containing
-#'   \item{\code{disj}}{A matrix of identified set of predictors
-#'     and conjunctions of predictors. Each entry corresponds to
-#'     the column index in X. Negative values indicate negations.
-#'     Missing values mean that the term does not contain any
-#'     more variables.}
+#'   \item{\code{disj}}{A matrix of the identified set of predictors
+#'     and conjunctions of predictors. Each row corresponds to one term.
+#'     Each entry corresponds to the column index in \code{X}.
+#'     Negative values indicate negations. Missing values mean that the
+#'     term does not contain any more variables.}
 #'   \item{\code{real_disj}}{Human readable form of \code{disj}.
 #'     Here, variable names are directly depicted.}
 #'   \item{\code{score}}{Score of the best model. Smaller values
 #'     are prefered.}
 #'   \item{\code{pet}}{Decision tree fitted on the best set of
 #'     input terms. This is a list containing the pointer to the
-#'     C representation of the tree and R representations of the
+#'     \code{C} representation of the tree and \code{R} representations of the
 #'     tree structure such as the splits and predictions.}
 #'   \item{\code{ensemble}}{List of decision trees. Only relevant
 #'     if inner validation was used.}
@@ -203,15 +205,16 @@ logicDT <- function(X, ...) UseMethod("logicDT")
 #'     iterations, i.e., tested configurations by fitting a tree
 #'     (ensemble) and evaluating it.}
 #'   \item{\code{prevented_evals}}{The number of prevented tree
-#'     fitting by using the 2-dimensional hash table.}
+#'     fittings by using the two-dimensional hash table.}
 #'   \item{\code{...}}{Supplied parameters of the functional call
 #'     to \code{\link{logicDT}}.}
 #' @example examples/toy.R
 #' @references
 #' \itemize{
-#'   \item Lau, M., Schikowski, T. & Schwender, H. (2021).
-#'   logicDT: A Procedure for Identifying Response-Associated
-#'   Interactions Between Binary Predictors. To be submitted.
+#'   \item Lau, M., Schikowski, T. & Schwender, H. (2024).
+#'   logicDT: A procedure for identifying response-associated
+#'   interactions between binary predictors. Machine Learning 113(2):933–992.
+#'   \doi{https://doi.org/10.1007/s10994-023-06488-6}
 #'   \item Breiman, L., Friedman, J., Stone, C. J. & Olshen, R. A. (1984).
 #'   Classification and Regression Trees. CRC Press.
 #'   \doi{https://doi.org/10.1201/9781315139470}
@@ -460,7 +463,7 @@ logicDT.default <- function(X, y, max_vars = 3, max_conj = 3, Z = NULL,
   class(model) <- "logicDT"
 
   if(search_algo == "genetic") {
-    class(model) <- "geneticLogicPET"
+    class(model) <- "genetic.logicDT"
     model$best_score <- best_score
 
     n_ind <- length(model$disj)
@@ -798,9 +801,9 @@ decodeModel <- function(code) {
 #' which contains for each conjunction a corresponding column.
 #'
 #' @param X The original (binary) predictor matrix. This has to be of type
-#'   integer.
+#'   \code{integer}.
 #' @param disj The conjunction matrix which can, e.g., be extracted from a
-#'   fitted \code{logicDT} model via $disj.
+#'   fitted \code{logicDT} model via \code{$disj}.
 #' @return The transformed design matrix.
 #'
 #' @export
@@ -847,6 +850,7 @@ simplifyDisjunctions <- function(model) {
 simplifyConjunctions <- function(model) {
   disj <- model$disj
   score <- model$score
+  disj <- sortModel(disj)
 
   n_conj <- sum(rowSums(!is.na(disj)) > 0)
 
@@ -863,9 +867,6 @@ simplifyConjunctions <- function(model) {
   y_val <- model$y_val
   use_validation <- model$use_validation
   y_bin <- model$y_bin
-
-  # Hm
-  disj <- sortModel(disj)
 
   for (i in 1:n_conj) {
     current_conj <- disj[i,]
@@ -990,7 +991,7 @@ getScoreRule <- function(scoring_rule) {
 #' Supply new input data for predicting the outcome with a fitted
 #' logicDT model.
 #'
-#' @param object Fitted logicDT model. Usually a product of a call
+#' @param object Fitted \code{logicDT} model. Usually a product of a call
 #'   to \code{\link{logicDT}}.
 #' @param X Matrix or data frame of binary input data. This
 #'   object should correspond to the binary matrix for fitting
@@ -998,24 +999,24 @@ getScoreRule <- function(scoring_rule) {
 #' @param Z Optional quantitative covariables supplied as a
 #'   matrix or data frame. Only used (and required) if the
 #'   model was fitted using them.
-#' @param type Prediction type. This can either be "prob" for
-#'   probability estimates or "class" for
-#'   classification in binary responses. Ignored for regression.
+#' @param type Prediction type. This can either be \code{"prob"} for
+#'   probability estimates or \code{"class"} for (hard)
+#'   classification of binary responses. Ignored for regression.
 #' @param ensemble If the model was fitted using the inner
 #'   validation approach, shall the prediction be constructed
-#'   using the final validated ensemble (TRUE) or using the
-#'   single final tree (FALSE)?
-#' @param leaves If four parameter logistic models were fitted
-#'   for each leaf, shall they be used for the prediction
-#'   ("4pl") or shall the constant leaf means be used
-#'   ("constant")?
-#' @param models Which models of logicDT model fitted with
+#'   using the final validated ensemble (\code{TRUE}) or using the
+#'   single final tree (\code{FALSE})?
+#' @param leaves If leaf regression models (such as four parameter logistic
+#'   models) were fitted, shall these models be used for the prediction
+#'   (\code{"4pl"}) or shall the constant leaf means be used
+#'   (\code{"constant"})?
+#' @param models Which logicDT models fitted via
 #'   genetic programming shall be used for prediction?
-#'   "best" leads to the single best model in the final
-#'   generation, "all" uses the average over the final
-#'   generation and "n_models" uses the n_models best models.
+#'   \code{"best"} leads to the single best model in the final
+#'   generation, \code{"all"} uses the average over the final
+#'   generation and \code{"n_models"} uses the \code{n_models} best models.
 #' @param n_models How many models shall be used if
-#'   models = "n_models" and genetic programming was employed?
+#'   \code{models = "n_models"} and genetic programming was employed?
 #' @param ... Parameters supplied to \code{\link{predict.logicDT}}
 #' @return A numeric vector of predictions. For binary outcomes,
 #'   this is a vector with estimates for \eqn{P(Y=1 \mid X = x)}.
@@ -1041,7 +1042,7 @@ predict.logicDT <- function(object, X, Z = NULL, type = "prob", ensemble = FALSE
 
 #' @rdname predict.logicDT
 #' @export
-predict.geneticLogicPET <- function(object, X, Z = NULL, models = "best", n_models = 10, ensemble = NULL, leaves = "4pl", ...) {
+predict.genetic.logicDT <- function(object, X, Z = NULL, models = "best", n_models = 10, ensemble = NULL, leaves = "4pl", ...) {
   X <- as.matrix(X)
   mode(X) <- "integer"
   if(!is.null(Z)) {
@@ -1089,7 +1090,7 @@ translateLogicPET <- function(disj, X) {
 #' @param y Response vector. 0-1 coding for binary outcomes,
 #'   otherwise conventional regression is performed.
 #' @param Z Numeric vector of (univariate) input samples.
-#' @return An object of class "4pl" which contains a numeric
+#' @return An object of class \code{"4pl"} which contains a numeric
 #'   vector of the fitted parameters b, c, d, and e.
 #'
 #' @export
@@ -1107,7 +1108,7 @@ fit4plModel <- function(y, Z) {
 #' Use new input data and a fitted four parameter logistic
 #' model to predict corresponding outcomes.
 #'
-#' @param object Fitted 4pl model
+#' @param object Fitted \code{4pl} model
 #' @param Z Numeric vector of new input samples
 #' @param ... Ignored additional parameters
 #' @return A numeric vector of predictions. For binary outcomes,
@@ -1141,7 +1142,7 @@ predict.4pl <- function(object, Z, ...) {
 #' @param logistic Logical indicating whether, in the case of a binary
 #'   outcome, a logistic regression model should be fitted
 #'   (\code{TRUE}) or a LDA model should be fitted (\code{FALSE})
-#' @return An object of class "linear" which contains a numeric
+#' @return An object of class \code{"linear"} which contains a numeric
 #'   vector of the fitted parameters b and c.
 #'
 #' @export
@@ -1162,7 +1163,7 @@ fitLinearModel <- function(y, Z, logistic = TRUE) {
 #' For binary outcomes, predictions are cut at 0 or 1 for generating
 #' proper probability estimates.
 #'
-#' @param object Fitted linear model
+#' @param object Fitted \code{linear} model
 #' @param Z Numeric vector of new input samples
 #' @param ... Ignored additional parameters
 #' @return A numeric vector of predictions. For binary outcomes,

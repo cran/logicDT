@@ -22,8 +22,8 @@
 #' Thus, a start and an end temperature have to be
 #' supplied.
 #'
-#' @param type Type of cooling schedule. "adaptive"
-#'   (default) or "geometric"
+#' @param type Type of cooling schedule. \code{"adaptive"}
+#'   (default) or \code{"geometric"}
 #' @param start_temp Start temperature on a log10 scale.
 #'   Only used if \code{auto_start_temp = FALSE}.
 #' @param end_temp End temperature on a log10 scale.
@@ -33,7 +33,7 @@
 #'   such that in total, several hundred thousand
 #'   iterations are performed. Lower values lead to a more
 #'   fine search with more iterations while higher values
-#'   lead to a more rigorous search with less total
+#'   lead to a more coarse search with less total
 #'   iterations.
 #' @param total_iter Total number of iterations that
 #'   should be performed. Only used for the geometric
@@ -53,47 +53,46 @@
 #'   be left if \eqn{0.5 \cdot 1000 = 500} states were
 #'   accepted in a single chain.
 #' @param acc_type Type of acceptance function. The
-#'   standard "probabilistic" uses the conventional
+#'   standard \code{"probabilistic"} uses the conventional
 #'   function
 #'   \eqn{\exp((\mathrm{Score}_\mathrm{old} -
 #'   \mathrm{Score}_\mathrm{new})/t)}
 #'   for calculating the acceptance probability.
-#'   "deterministc" accepts the new state, if and only
+#'   \code{"deterministic"} accepts the new state, if and only
 #'   if
 #'   \eqn{\mathrm{Score}_\mathrm{new} -
 #'   \mathrm{Score}_\mathrm{old} < t}.
 #' @param frozen_def How to define a frozen chain.
-#'   "acc" means that if less than
+#'   \code{"acc"} means that if less than
 #'   \eqn{\texttt{frozen\_acc\_frac} \cdot
 #'   \texttt{markov\_iter}} states with different scores
 #'   were accepted in a single chain, this chain is
-#'   marked as frozen. Several frozen chains indicate
-#'   that the search is finished.
-#' @param frozen_acc_frac If \code{frozen_def =
-#'   frozen_acc_frac}, this parameter determines the
-#'   fraction of iterations which defines a frozen
-#'   chain.
-#' @param frozen_markov_count How many frozen chains
-#'   need to be observed for finishing the search?
+#'   marked as frozen. \code{"sd"} declares a chain as frozen if the
+#'   corresponding score standard deviation is zero.
+#'   Several frozen chains indicate that the search is finished.
+#' @param frozen_acc_frac If \code{frozen_def = "acc"}, this parameter
+#'   determines the fraction of iterations that define a frozen chain.
+#' @param frozen_markov_count Number of frozen chains that
+#'   need to be observed for finishing the search.
 #' @param frozen_markov_mode Do the frozen chains
-#'   have to occur consecutively ("consecutive")
+#'   have to occur consecutively (\code{"consecutive"})
 #'   or is the total number of frozen chains
-#'   relevant ("total")?
-#' @param start_temp_steps If \code{auto_start_temp =
-#'   TRUE}, how many iterations should be used for
-#'   estimating the ideal start temperature?
-#' @param start_acc_ratio Which acceptance ratio
+#'   relevant (\code{"total"})?
+#' @param start_temp_steps Number of iterations that should be used for
+#'   estimating the ideal start temperature if \code{auto_start_temp =
+#'   TRUE} is set.
+#' @param start_acc_ratio Acceptance ratio that
 #'   should be achieved with the automatically
-#'   configured start temperature?
+#'   configured start temperature.
 #' @param auto_start_temp Should the start
 #'   temperature be configured automatically?
-#'   TRUE or FALSE
+#'   \code{TRUE} or \code{FALSE}
 #' @param remember_models Should already evaluated
 #'   models be saved in a 2-dimensional hash table
 #'   to prevent fitting the same trees multiple
 #'   times?
-#' @param print_iter After how many iterations
-#'   shall a progress report be printed?
+#' @param print_iter Number of iterations after which
+#'   a progress report shall be printed.
 #' @return An object of class \code{cooling.schedule}
 #'   which is a list of all necessary cooling parameters.
 #'

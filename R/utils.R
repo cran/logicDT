@@ -103,7 +103,7 @@ calcNCE <- function(preds, y) {
   return(ce/denominator)
 }
 
-#' Fast computation of the AUC w.r.t. to the ROC.
+#' Fast computation of the AUC w.r.t. to the ROC
 #'
 #' This function computes the area under the receiver operating
 #' characteristic curve.
@@ -149,8 +149,8 @@ calcMSE <- function(preds, y) {
 #'
 #' @param preds Numeric vector of predictions
 #' @param y True outcomes
-#' @param type "sd" uses the standard deviation of y for
-#'   normalization. "range" uses the whole span of y.
+#' @param type \code{"sd"} uses the standard deviation of \code{y} for
+#'   normalization. \code{"range"} uses the whole span of \code{y}.
 #' @return The NRMSE
 #'
 #' @importFrom stats sd

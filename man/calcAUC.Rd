@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils.R
 \name{calcAUC}
 \alias{calcAUC}
-\title{Fast computation of the AUC w.r.t. to the ROC.}
+\title{Fast computation of the AUC w.r.t. to the ROC}
 \usage{
 calcAUC(preds, y, fast = TRUE, sorted = FALSE)
 }

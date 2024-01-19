@@ -11,8 +11,8 @@ calcNRMSE(preds, y, type = "sd")
 
 \item{y}{True outcomes}
 
-\item{type}{"sd" uses the standard deviation of y for
-normalization. "range" uses the whole span of y.}
+\item{type}{\code{"sd"} uses the standard deviation of \code{y} for
+normalization. \code{"range"} uses the whole span of \code{y}.}
 }
 \value{
 The NRMSE

@@ -5,7 +5,7 @@
 \alias{predict.logicDT}
 \alias{predict.logic.bagged}
 \alias{predict.logic.boosted}
-\alias{predict.geneticLogicPET}
+\alias{predict.genetic.logicDT}
 \title{Prediction for logicDT models}
 \usage{
 \method{predict}{logic.bagged}(object, X, Z = NULL, type = "prob", ...)
@@ -22,7 +22,7 @@
   ...
 )
 
-\method{predict}{geneticLogicPET}(
+\method{predict}{genetic.logicDT}(
   object,
   X,
   Z = NULL,
@@ -34,7 +34,7 @@
 )
 }
 \arguments{
-\item{object}{Fitted logicDT model. Usually a product of a call
+\item{object}{Fitted \code{logicDT} model. Usually a product of a call
 to \code{\link{logicDT}}.}
 
 \item{X}{Matrix or data frame of binary input data. This
@@ -45,30 +45,30 @@ the model.}
 matrix or data frame. Only used (and required) if the
 model was fitted using them.}
 
-\item{type}{Prediction type. This can either be "prob" for
-probability estimates or "class" for
-classification in binary responses. Ignored for regression.}
+\item{type}{Prediction type. This can either be \code{"prob"} for
+probability estimates or \code{"class"} for (hard)
+classification of binary responses. Ignored for regression.}
 
 \item{...}{Parameters supplied to \code{\link{predict.logicDT}}}
 
 \item{ensemble}{If the model was fitted using the inner
 validation approach, shall the prediction be constructed
-using the final validated ensemble (TRUE) or using the
-single final tree (FALSE)?}
+using the final validated ensemble (\code{TRUE}) or using the
+single final tree (\code{FALSE})?}
 
-\item{leaves}{If four parameter logistic models were fitted
-for each leaf, shall they be used for the prediction
-("4pl") or shall the constant leaf means be used
-("constant")?}
+\item{leaves}{If leaf regression models (such as four parameter logistic
+models) were fitted, shall these models be used for the prediction
+(\code{"4pl"}) or shall the constant leaf means be used
+(\code{"constant"})?}
 
-\item{models}{Which models of logicDT model fitted with
+\item{models}{Which logicDT models fitted via
 genetic programming shall be used for prediction?
-"best" leads to the single best model in the final
-generation, "all" uses the average over the final
-generation and "n_models" uses the n_models best models.}
+\code{"best"} leads to the single best model in the final
+generation, \code{"all"} uses the average over the final
+generation and \code{"n_models"} uses the \code{n_models} best models.}
 
 \item{n_models}{How many models shall be used if
-models = "n_models" and genetic programming was employed?}
+\code{models = "n_models"} and genetic programming was employed?}
 }
 \value{
 A numeric vector of predictions. For binary outcomes,

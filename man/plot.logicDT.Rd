@@ -5,12 +5,23 @@
 \alias{fancy.plot}
 \title{Plot a logic decision tree}
 \usage{
-fancy.plot(x, ...)
+fancy.plot(x, cdot = FALSE, ...)
 
-\method{plot}{logicDT}(x, fancy = TRUE, x_scaler = 0.5, margin_scaler = 0.2, cex = 1, ...)
+\method{plot}{logicDT}(
+  x,
+  fancy = TRUE,
+  x_scaler = 0.5,
+  margin_scaler = 0.2,
+  cex = 1,
+  cdot = FALSE,
+  ...
+)
 }
 \arguments{
 \item{x}{An object of the class \code{logicDT}}
+
+\item{cdot}{Should a centered dot be used instead of a logical and
+for depicting interactions?}
 
 \item{...}{Arguments passed to fancy plotting function}
 
@@ -41,7 +52,7 @@ There are two plotting modes:
   \item \code{fancy = TRUE} plots a tree similar to those in the \code{rpart}
   (Therneau and Atkinson, 2019) and \code{splinetree} (Neufeld and Heggeseth,
   2019) \code{R} packages. The trees are drawn in an angular manner and
-  if 4pL modeling was used for the leaves, appropriate plots of the fitted
+  if leaf regression models were fitted, appropriate plots of the fitted
   curves are depicted in the leaves. Otherwise, the usual prediction values
   are shown.
 }

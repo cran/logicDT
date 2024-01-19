@@ -18,53 +18,52 @@ tree.control(
 \item{nodesize}{Minimum number of samples contained in a
 terminal node. This parameter ensures that enough samples
 are available for performing predictions which includes
-fitting 4pL models.}
+fitting regression models such as 4pL models.}
 
 \item{split_criterion}{Splitting criterion for deciding
-when and how to split. The default is "gini"/"mse" which
+when and how to split. The default is \code{"gini"}/\code{"mse"} which
 utilizes the Gini splitting criterion for binary risk
 estimation tasks and the mean squared error as impurity
-measure in regression tasks. Alternatively, "4pl" can be
+measure in regression tasks. Alternatively, \code{"4pl"} can be
 used if a quantitative covariable is supplied and
 the parameter \code{covariable} is chosen such that 4pL
 model fitting is enabled, i.e., \code{covariable = "final_4pl"}
 or \code{covariable = "full_4pl"}.
-A fast modeling alternative is given by "linear" which also
+A fast modeling alternative is given by \code{"linear"} which also
 requires the parameter \code{covariable} to be properly
 chosen, i.e., \code{covariable = "final_linear"}
 or \code{covariable = "full_linear"}.}
 
 \item{alpha}{Significance threshold for the likelihood ratio
-tests when using \code{split_criterion = "4pl"}. Only
-splits that achieve a p-value smaller than \code{alpha} are
-eligible.}
+tests when using \code{split_criterion = "4pl"} or \code{"linear"}.
+Only splits that achieve a p-value smaller than \code{alpha} are eligible.}
 
 \item{cp}{Complexity parameter. This parameter determines
 by which amount the impurity has to be reduced to further
 split a node. Here, the total tree impurity is considered.
-See details for a concrete formula. Only used if
+See details for a specific formula. Only used if
 \code{split_criterion = "gini"} or \code{"mse"}.}
 
 \item{smoothing}{Shall the leaf predictions for risk
-estimation be smoothed? "laplace" yields Laplace smoothing.
-The default is "none" which does not employ smoothing.#'}
+estimation be smoothed? \code{"laplace"} yields Laplace smoothing.
+The default is \code{"none"} which does not employ smoothing.}
 
 \item{mtry}{Shall the tree fitting process be randomized
-as in random forests? Currently, only "sqrt" for using
+as in random forests? Currently, only \code{"sqrt"} for using
 \eqn{\sqrt{p}} random predictors at each node for splitting
-and "none" (default) for fitting conventional decision trees
+and \code{"none"} (default) for fitting conventional decision trees
 are supported.}
 
 \item{covariable}{How shall optional quantitative covariables
-be handled? "constant" ignores them. Alternatively,
-they can be considered as splitting variables ("_split"),
-used for fitting 4pL models in each leaf ("_4pl"), or used
-for fitting linear models in each leaf ("_linear"). If either
+be handled? \code{"constant"} ignores them. Alternatively,
+they can be considered as splitting variables (\code{"_split"}),
+used for fitting 4pL models in each leaf (\code{"_4pl"}), or used
+for fitting linear models in each leaf (\code{"_linear"}). If either
 splitting or model fitting is chosen, one should state if this
-should be handled over the whole search ("full_",
+should be handled over the whole search (\code{"full_"},
 computationally expensive) or just the final trees
-("final_"). Thus, "final_4pl" would lead to fitting 4pL in
-each leaf but only for the final fitting of trees.}
+(\code{"final_"}). Thus, \code{"final_4pl"} would lead to fitting
+4pL models in each leaf but only for the final tree fitting.}
 }
 \value{
 An object of class \code{tree.control} which is a list

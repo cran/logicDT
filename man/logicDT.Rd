@@ -44,28 +44,28 @@ Otherwise, a regression task is assumed.}
 For the set \eqn{[X_1 \land X_2^c, X_1 \land X_3]}, this parameter
 is equal to 4.}
 
-\item{max_conj}{Maximum number of input variables for the decision
-trees. For the set \eqn{[X_1 \land X_2^c, X_1 \land X_3]}, this
+\item{max_conj}{Maximum number of conjunctions/input variables for the
+decision trees. For the set \eqn{[X_1 \land X_2^c, X_1 \land X_3]}, this
 parameter is equal to 2.}
 
 \item{Z}{Optional matrix or data frame of quantitative/continuous
 covariables. Multiple covariables allowed for splitting the trees.
-If four parameter logistic models shall be fitted in the leaves,
-only the first given covariable is used.}
+If leaf regression models (such as four parameter logistic models) shall
+be fitted, only the first given covariable is used.}
 
 \item{search_algo}{Search algorithm for guiding the global search.
-This can either be "sa" for simulated annealing, "greedy" for a
-greedy search or "gp" for genetic programming.}
+This can either be \code{"sa"} for simulated annealing, \code{"greedy"}
+for a greedy search or \code{"gp"} for genetic programming.}
 
 \item{cooling_schedule}{Cooling schedule parameters if simulated
 annealing is used. The required object should be created via
 the function \code{\link{cooling.schedule}}.}
 
 \item{scoring_rule}{Scoring rule for guiding the global search.
-This can either be "auc" for the area under the receiver
+This can either be \code{"auc"} for the area under the receiver
 operating characteristic curve (default for binary reponses),
-"deviance" for the deviance, "nce" for the normalized cross entropy
-or "brier" for the Brier score.
+\code{"deviance"} for the deviance, \code{"nce"} for the normalized cross
+entropy or \code{"brier"} for the Brier score.
 For regression purposes, the MSE (mean squared error) is
 automatically chosen.}
 
@@ -83,34 +83,34 @@ logicDT models, instead, the model complexity parameters \code{max_vars}
 and \code{max_conj} should be tuned.}
 
 \item{simplify}{Should the final fitted model be simplified?
-This means, that unnecessary terms as a whole ("conj") will
+This means, that unnecessary terms as a whole (\code{"conj"}) will
 be removed if they cannot improve the score.
-simplify = "vars" additionally tries to prune individual
+\code{simplify = "vars"} additionally tries to prune individual
 conjunctions by removing unnecessary variables in those.
-simplify = "none" will not modify the final model.}
+\code{simplify = "none"} will not modify the final model.}
 
-\item{val_method}{Inner validation method. "rv" leads to a
-repeated validation where val_reps times the original data
+\item{val_method}{Inner validation method. \code{"rv"} leads to a
+repeated validation where \code{val_reps} times the original data
 set is divided into \eqn{\texttt{val\_frac} \cdot 100\%} validation
 data and \eqn{(1-\texttt{val\_frac}) \cdot 100\%} training data.
-"bootstrap" draws bootstrap samples and uses the out-of-bag
-data as validation data. "cv" employs cross-validation with
-val_reps folds.}
+\code{"bootstrap"} draws bootstrap samples and uses the out-of-bag
+data as validation data. \code{"cv"} employs cross-validation with
+\code{val_reps} folds.}
 
-\item{val_frac}{Only used if val_method = "rv". See description
-of val_method.}
+\item{val_frac}{Only used if \code{val_method = "rv"}. See description
+of \code{val_method}.}
 
 \item{val_reps}{Number of inner validation partitionings.}
 
 \item{allow_conj_removal}{Should it be allowed to remove
 complete terms/conjunctions in the search?
-If exact numbers of terms are aimed at, this should be set
-to FALSE. If extensive hyperparameter optimizations are
-feasible, allow_conj_removal = FALSE with a proper search
-over max_vars and max_conj is advised for fitting single
-models. For bagging or boosting with a greedy search,
-allow_conj_removal = TRUE together with a small number for
-max_vars = max_conj is recommended, e.g., 2 or 3.}
+If a model with the specified exact number of terms is desired,
+this should be set to \code{FALSE}. If extensive hyperparameter
+optimizations are feasible, \code{allow_conj_removal = FALSE} with a
+proper search over \code{max_vars} and \code{max_conj} is advised for
+fitting single models. For bagging or boosting with a greedy search,
+\code{allow_conj_removal = TRUE} together with a small number for
+\code{max_vars = max_conj} is recommended, e.g., 2 or 3.}
 
 \item{conjsize}{The minimum of training samples that have to
 belong to a conjunction. This parameters prevents including
@@ -123,24 +123,26 @@ Speeds up the greedy search but can lead to inferior results.}
 
 \item{greedy_mod}{Should modifications of conjunctions be
 considered in a greedy search?
-Speeds up the greedy search but can lead to inferior results.}
+\code{greedy_mod = FALSE} speeds up the greedy search but can
+lead to inferior results.}
 
 \item{greedy_rem}{Should the removal of conjunctions be
 considered in a greedy search?
-Speeds up the greedy search but can lead to inferior results.}
+\code{greedy_rem = FALSE} speeds up the greedy search but can
+lead to inferior results.}
 
 \item{max_gen}{Maximum number of generations for genetic
 programming.}
 
 \item{gp_sigma}{Parameter \eqn{\sigma} for fitness sharing in
 genetic programming. Very small values (e.g., 0.001) are
-recommended leading to only penalizing models with yield
+recommended leading to only penalizing models which yield
 the exact same score.}
 
 \item{gp_fs_interval}{Interval for fitness sharing in
 genetic programming. The fitness calculation can be
 computationally expensive if many models exist in one
-generation. gp_fs_interval = 10 leads to performing
+generation. \code{gp_fs_interval = 10} leads to performing
 fitness sharing only every 10th generation.}
 
 \item{...}{Arguments passed to \code{\link{logicDT.default}}}
@@ -155,18 +157,18 @@ if they should be included as well.}
 \value{
 An object of class \code{logicDT}. This is a list
   containing
-  \item{\code{disj}}{A matrix of identified set of predictors
-    and conjunctions of predictors. Each entry corresponds to
-    the column index in X. Negative values indicate negations.
-    Missing values mean that the term does not contain any
-    more variables.}
+  \item{\code{disj}}{A matrix of the identified set of predictors
+    and conjunctions of predictors. Each row corresponds to one term.
+    Each entry corresponds to the column index in \code{X}.
+    Negative values indicate negations. Missing values mean that the
+    term does not contain any more variables.}
   \item{\code{real_disj}}{Human readable form of \code{disj}.
     Here, variable names are directly depicted.}
   \item{\code{score}}{Score of the best model. Smaller values
     are prefered.}
   \item{\code{pet}}{Decision tree fitted on the best set of
     input terms. This is a list containing the pointer to the
-    C representation of the tree and R representations of the
+    \code{C} representation of the tree and \code{R} representations of the
     tree structure such as the splits and predictions.}
   \item{\code{ensemble}}{List of decision trees. Only relevant
     if inner validation was used.}
@@ -174,7 +176,7 @@ An object of class \code{logicDT}. This is a list
     iterations, i.e., tested configurations by fitting a tree
     (ensemble) and evaluating it.}
   \item{\code{prevented_evals}}{The number of prevented tree
-    fitting by using the 2-dimensional hash table.}
+    fittings by using the two-dimensional hash table.}
   \item{\code{...}}{Supplied parameters of the functional call
     to \code{\link{logicDT}}.}
 }
@@ -217,8 +219,8 @@ when choosing an inner validation.
 \section{Saving and Loading}{
 
 logicDT models can be saved and loaded using \code{save(...)} and
-  \code{load(...)}. The internal C structures will not be saved
-  but rebuilt from the R representations if necessary.
+  \code{load(...)}. The internal \code{C} structures will not be saved
+  but rebuilt from the \code{R} representations if necessary.
 }
 
 \examples{
@@ -228,7 +230,8 @@ maf <- 0.25
 n.snps <- 50
 N <- 2000
 X <- matrix(sample(0:2, n.snps * N, replace = TRUE,
-                   prob = c((1-maf)^2, 1-(1-maf)^2-maf^2, maf^2)), ncol = n.snps)
+                   prob = c((1-maf)^2, 1-(1-maf)^2-maf^2, maf^2)),
+            ncol = n.snps)
 colnames(X) <- paste("SNP", 1:n.snps, sep="")
 X <- splitSNPs(X)
 Z <- matrix(rnorm(N, 20, 10), ncol = 1)
@@ -240,40 +243,52 @@ y <- -0.75 + log(2) * (X[,"SNP1D"] != 0) +
 
 \donttest{
 # Fit and evaluate single logicDT model
-model <- logicDT(X[1:(N/2),], y[1:(N/2)], Z = Z[1:(N/2),,drop=FALSE],
+model <- logicDT(X[1:(N/2),], y[1:(N/2)],
+                 Z = Z[1:(N/2),,drop=FALSE],
                  max_vars = 3, max_conj = 2,
                  search_algo = "sa",
-                 tree_control = tree.control(nodesize = floor(0.05 * nrow(X)/2)),
+                 tree_control = tree.control(
+                   nodesize = floor(0.05 * nrow(X)/2)
+                 ),
                  simplify = "vars",
-                 allow_conj_removal = FALSE, conjsize = floor(0.05 * nrow(X)/2))
-calcNRMSE(predict(model, X[(N/2+1):N,], Z = Z[(N/2+1):N,,drop=FALSE]),
-          y[(N/2+1):N])
+                 allow_conj_removal = FALSE,
+                 conjsize = floor(0.05 * nrow(X)/2))
+calcNRMSE(predict(model, X[(N/2+1):N,],
+                  Z = Z[(N/2+1):N,,drop=FALSE]), y[(N/2+1):N])
 plot(model)
 print(model)
 
 # Fit and evaluate bagged logicDT model
-model.bagged <- logicDT.bagging(X[1:(N/2),], y[1:(N/2)], Z = Z[1:(N/2),,drop=FALSE],
+model.bagged <- logicDT.bagging(X[1:(N/2),], y[1:(N/2)],
+                                Z = Z[1:(N/2),,drop=FALSE],
                                 bagging.iter = 50,
                                 max_vars = 3, max_conj = 3,
                                 search_algo = "greedy",
-                                tree_control = tree.control(nodesize = floor(0.05 * nrow(X)/2)),
+                                tree_control = tree.control(
+                                  nodesize = floor(0.05 * nrow(X)/2)
+                                ),
                                 simplify = "vars",
                                 conjsize = floor(0.05 * nrow(X)/2))
-calcNRMSE(predict(model.bagged, X[(N/2+1):N,], Z = Z[(N/2+1):N,,drop=FALSE]),
-          y[(N/2+1):N])
+calcNRMSE(predict(model.bagged, X[(N/2+1):N,],
+                  Z = Z[(N/2+1):N,,drop=FALSE]), y[(N/2+1):N])
 print(model.bagged)
 
 # Fit and evaluate boosted logicDT model
-model.boosted <- logicDT.boosting(X[1:(N/2),], y[1:(N/2)], Z = Z[1:(N/2),,drop=FALSE],
-                                  boosting.iter = 50, learning.rate = 0.01,
-                                  subsample.frac = 0.75, replace = FALSE,
+model.boosted <- logicDT.boosting(X[1:(N/2),], y[1:(N/2)],
+                                  Z = Z[1:(N/2),,drop=FALSE],
+                                  boosting.iter = 50,
+                                  learning.rate = 0.01,
+                                  subsample.frac = 0.75,
+                                  replace = FALSE,
                                   max_vars = 3, max_conj = 3,
                                   search_algo = "greedy",
-                                  tree_control = tree.control(nodesize = floor(0.05 * nrow(X)/2)),
+                                  tree_control = tree.control(
+                                    nodesize = floor(0.05 * nrow(X)/2)
+                                  ),
                                   simplify = "vars",
                                   conjsize = floor(0.05 * nrow(X)/2))
-calcNRMSE(predict(model.boosted, X[(N/2+1):N,], Z = Z[(N/2+1):N,,drop=FALSE]),
-          y[(N/2+1):N])
+calcNRMSE(predict(model.boosted, X[(N/2+1):N,],
+                  Z = Z[(N/2+1):N,,drop=FALSE]), y[(N/2+1):N])
 print(model.boosted)
 
 # Calculate VIMs (variable importance measures)
@@ -282,22 +297,27 @@ plot(vims)
 print(vims)}
 
 # Single greedy model
-model <- logicDT(X[1:(N/2),], y[1:(N/2)], Z = Z[1:(N/2),,drop=FALSE],
+model <- logicDT(X[1:(N/2),], y[1:(N/2)],
+                 Z = Z[1:(N/2),,drop=FALSE],
                  max_vars = 3, max_conj = 2,
                  search_algo = "greedy",
-                 tree_control = tree.control(nodesize = floor(0.05 * nrow(X)/2)),
+                 tree_control = tree.control(
+                   nodesize = floor(0.05 * nrow(X)/2)
+                 ),
                  simplify = "vars",
-                 allow_conj_removal = FALSE, conjsize = floor(0.05 * nrow(X)/2))
-calcNRMSE(predict(model, X[(N/2+1):N,], Z = Z[(N/2+1):N,,drop=FALSE]),
-          y[(N/2+1):N])
+                 allow_conj_removal = FALSE,
+                 conjsize = floor(0.05 * nrow(X)/2))
+calcNRMSE(predict(model, X[(N/2+1):N,],
+                  Z = Z[(N/2+1):N,,drop=FALSE]), y[(N/2+1):N])
 plot(model)
 print(model)
 }
 \references{
 \itemize{
-  \item Lau, M., Schikowski, T. & Schwender, H. (2021).
-  logicDT: A Procedure for Identifying Response-Associated
-  Interactions Between Binary Predictors. To be submitted.
+  \item Lau, M., Schikowski, T. & Schwender, H. (2024).
+  logicDT: A procedure for identifying response-associated
+  interactions between binary predictors. Machine Learning 113(2):933–992.
+  \doi{https://doi.org/10.1007/s10994-023-06488-6}
   \item Breiman, L., Friedman, J., Stone, C. J. & Olshen, R. A. (1984).
   Classification and Regression Trees. CRC Press.
   \doi{https://doi.org/10.1201/9781315139470}

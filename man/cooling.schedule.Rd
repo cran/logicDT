@@ -25,8 +25,8 @@ cooling.schedule(
 )
 }
 \arguments{
-\item{type}{Type of cooling schedule. "adaptive"
-(default) or "geometric"}
+\item{type}{Type of cooling schedule. \code{"adaptive"}
+(default) or \code{"geometric"}}
 
 \item{start_temp}{Start temperature on a log10 scale.
 Only used if \code{auto_start_temp = FALSE}.}
@@ -39,7 +39,7 @@ schedule. Values between 0.01 and 0.1 are recommended
 such that in total, several hundred thousand
 iterations are performed. Lower values lead to a more
 fine search with more iterations while higher values
-lead to a more rigorous search with less total
+lead to a more coarse search with less total
 iterations.}
 
 \item{total_iter}{Total number of iterations that
@@ -63,56 +63,55 @@ be left if \eqn{0.5 \cdot 1000 = 500} states were
 accepted in a single chain.}
 
 \item{acc_type}{Type of acceptance function. The
-standard "probabilistic" uses the conventional
+standard \code{"probabilistic"} uses the conventional
 function
 \eqn{\exp((\mathrm{Score}_\mathrm{old} -
 \mathrm{Score}_\mathrm{new})/t)}
 for calculating the acceptance probability.
-"deterministc" accepts the new state, if and only
+\code{"deterministic"} accepts the new state, if and only
 if
 \eqn{\mathrm{Score}_\mathrm{new} -
 \mathrm{Score}_\mathrm{old} < t}.}
 
 \item{frozen_def}{How to define a frozen chain.
-"acc" means that if less than
+\code{"acc"} means that if less than
 \eqn{\texttt{frozen\_acc\_frac} \cdot
 \texttt{markov\_iter}} states with different scores
 were accepted in a single chain, this chain is
-marked as frozen. Several frozen chains indicate
-that the search is finished.}
+marked as frozen. \code{"sd"} declares a chain as frozen if the
+corresponding score standard deviation is zero.
+Several frozen chains indicate that the search is finished.}
 
-\item{frozen_acc_frac}{If \code{frozen_def =
-frozen_acc_frac}, this parameter determines the
-fraction of iterations which defines a frozen
-chain.}
+\item{frozen_acc_frac}{If \code{frozen_def = "acc"}, this parameter
+determines the fraction of iterations that define a frozen chain.}
 
-\item{frozen_markov_count}{How many frozen chains
-need to be observed for finishing the search?}
+\item{frozen_markov_count}{Number of frozen chains that
+need to be observed for finishing the search.}
 
 \item{frozen_markov_mode}{Do the frozen chains
-have to occur consecutively ("consecutive")
+have to occur consecutively (\code{"consecutive"})
 or is the total number of frozen chains
-relevant ("total")?}
+relevant (\code{"total"})?}
 
-\item{start_temp_steps}{If \code{auto_start_temp =
-TRUE}, how many iterations should be used for
-estimating the ideal start temperature?}
+\item{start_temp_steps}{Number of iterations that should be used for
+estimating the ideal start temperature if \code{auto_start_temp =
+TRUE} is set.}
 
-\item{start_acc_ratio}{Which acceptance ratio
+\item{start_acc_ratio}{Acceptance ratio that
 should be achieved with the automatically
-configured start temperature?}
+configured start temperature.}
 
 \item{auto_start_temp}{Should the start
 temperature be configured automatically?
-TRUE or FALSE}
+\code{TRUE} or \code{FALSE}}
 
 \item{remember_models}{Should already evaluated
 models be saved in a 2-dimensional hash table
 to prevent fitting the same trees multiple
 times?}
 
-\item{print_iter}{After how many iterations
-shall a progress report be printed?}
+\item{print_iter}{Number of iterations after which
+a progress report shall be printed.}
 }
 \value{
 An object of class \code{cooling.schedule}

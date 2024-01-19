@@ -17,7 +17,7 @@ outcome, a logistic regression model should be fitted
 (\code{TRUE}) or a LDA model should be fitted (\code{FALSE})}
 }
 \value{
-An object of class "linear" which contains a numeric
+An object of class \code{"linear"} which contains a numeric
   vector of the fitted parameters b and c.
 }
 \description{

@@ -13,8 +13,8 @@ logicDT.boosting <- function(X, ...) UseMethod("logicDT.boosting")
 #'  Otherwise, a regression task is assumed.
 #' @param Z Optional matrix or data frame of quantitative/continuous
 #'   covariables. Multiple covariables allowed for splitting the trees.
-#'   If four parameter logistic models shall be fitted in the leaves,
-#'   only the first given covariable is used.
+#'   If leaf regression models (such as four parameter logistic models) shall
+#'   be fitted, only the first given covariable is used.
 #' @param boosting.iter Number of boosting iterations
 #' @param learning.rate Learning rate for boosted models.
 #'   Values between 0.001 and 0.1 are recommended.
@@ -24,15 +24,15 @@ logicDT.boosting <- function(X, ...) UseMethod("logicDT.boosting")
 #'   is used in each iteration.
 #' @param replace Should the random draws with subsample.frac
 #'   in boosted models be performed with or without
-#'   replacement? TRUE or FALSE
+#'   replacement? \code{TRUE} or \code{FALSE}
 #' @param line.search Type of line search for gradient boosting.
-#'   "min" performs a real minimization while "binary" performs
+#'   \code{"min"} performs a real minimization while \code{"binary"} performs
 #'   a loose binary search for a boosting coefficient that
 #'   just reduces the score.
 #' @param ... Arguments passed to \code{logicDT}
 #' @return An object of class \code{logic.boosted}. This is a list
 #'   containing
-#'   \item{\code{models}}{A list of fitted logicDT models}
+#'   \item{\code{models}}{A list of fitted \code{logicDT} models}
 #'   \item{\code{rho}}{A vector of boosting coefficient corresponding
 #'   to each model}
 #'   \item{\code{initialModel}}{Initial model which is usually the
@@ -41,9 +41,10 @@ logicDT.boosting <- function(X, ...) UseMethod("logicDT.boosting")
 #'     to \code{\link{logicDT.boosting}}.}
 #' @references
 #' \itemize{
-#'   \item Lau, M., Schikowski, T. & Schwender, H. (2021).
-#'   logicDT: A Procedure for Identifying Response-Associated
-#'   Interactions Between Binary Predictors. To be submitted.
+#'   \item Lau, M., Schikowski, T. & Schwender, H. (2024).
+#'   logicDT: A procedure for identifying response-associated
+#'   interactions between binary predictors. Machine Learning 113(2):933–992.
+#'   \doi{https://doi.org/10.1007/s10994-023-06488-6}
 #'   \item Friedman, J. H. (2001).
 #'   Greedy Function Approximation: A Gradient Boosting Machine.
 #'   The Annals of Statistics, 29(5), 1189–1232.
@@ -273,10 +274,10 @@ partial.predict <- function(model, X, Z = NULL, n.iter = 1, ...) {
 #'   increase the validation performance for determining the ideal number of
 #'   iterations
 #' @param scoring_rule Scoring rule computing the validation performance.
-#'   This can either be "auc" for the area under the receiver
+#'   This can either be \code{"auc"} for the area under the receiver
 #'   operating characteristic curve (default for binary reponses),
-#'   "deviance" for the deviance, "nce" for the normalized cross entropy
-#'   or "brier" for the Brier score.
+#'   \code{"deviance"} for the deviance, "nce" for the normalized cross entropy
+#'   or \code{"brier"} for the Brier score.
 #'   For regression purposes, the MSE (mean squared error) is
 #'   automatically chosen.
 #' @return The ideal number of boosting iterations

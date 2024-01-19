@@ -3,7 +3,7 @@
 #' @importFrom graphics par plot lines rect points text strwidth
 #' @importFrom grDevices hcl.colors gray
 #' @export
-fancy.plot <- function(x, ...) {
+fancy.plot <- function(x, cdot = FALSE, ...) {
   model <- x
   # Preparing tree for plotting
   pet <- model$pet
@@ -195,7 +195,7 @@ fancy.plot <- function(x, ...) {
   }
 
   # Plot split variables
-  splits2 <- printable.splits(splits, splits_bin_or_cont, X)
+  splits2 <- printable.splits(splits, splits_bin_or_cont, X, cdot = cdot)
   cxy <- par("cxy"); cin <- par("cin")
   for(i in which(!leaf_pos)) {
     # Scale text appropriately

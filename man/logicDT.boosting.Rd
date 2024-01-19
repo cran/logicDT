@@ -28,8 +28,8 @@ Otherwise, a regression task is assumed.}
 
 \item{Z}{Optional matrix or data frame of quantitative/continuous
 covariables. Multiple covariables allowed for splitting the trees.
-If four parameter logistic models shall be fitted in the leaves,
-only the first given covariable is used.}
+If leaf regression models (such as four parameter logistic models) shall
+be fitted, only the first given covariable is used.}
 
 \item{boosting.iter}{Number of boosting iterations}
 
@@ -43,10 +43,10 @@ is used in each iteration.}
 
 \item{replace}{Should the random draws with subsample.frac
 in boosted models be performed with or without
-replacement? TRUE or FALSE}
+replacement? \code{TRUE} or \code{FALSE}}
 
 \item{line.search}{Type of line search for gradient boosting.
-"min" performs a real minimization while "binary" performs
+\code{"min"} performs a real minimization while \code{"binary"} performs
 a loose binary search for a boosting coefficient that
 just reduces the score.}
 
@@ -62,7 +62,7 @@ if they should be included as well.}
 \value{
 An object of class \code{logic.boosted}. This is a list
   containing
-  \item{\code{models}}{A list of fitted logicDT models}
+  \item{\code{models}}{A list of fitted \code{logicDT} models}
   \item{\code{rho}}{A vector of boosting coefficient corresponding
   to each model}
   \item{\code{initialModel}}{Initial model which is usually the
@@ -78,9 +78,10 @@ Details on single logicDT models can be found in \code{\link{logicDT}}.
 }
 \references{
 \itemize{
-  \item Lau, M., Schikowski, T. & Schwender, H. (2021).
-  logicDT: A Procedure for Identifying Response-Associated
-  Interactions Between Binary Predictors. To be submitted.
+  \item Lau, M., Schikowski, T. & Schwender, H. (2024).
+  logicDT: A procedure for identifying response-associated
+  interactions between binary predictors. Machine Learning 113(2):933–992.
+  \doi{https://doi.org/10.1007/s10994-023-06488-6}
   \item Friedman, J. H. (2001).
   Greedy Function Approximation: A Gradient Boosting Machine.
   The Annals of Statistics, 29(5), 1189–1232.

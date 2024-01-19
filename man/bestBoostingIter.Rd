@@ -22,10 +22,10 @@ increase the validation performance for determining the ideal number of
 iterations}
 
 \item{scoring_rule}{Scoring rule computing the validation performance.
-This can either be "auc" for the area under the receiver
+This can either be \code{"auc"} for the area under the receiver
 operating characteristic curve (default for binary reponses),
-"deviance" for the deviance, "nce" for the normalized cross entropy
-or "brier" for the Brier score.
+\code{"deviance"} for the deviance, "nce" for the normalized cross entropy
+or \code{"brier"} for the Brier score.
 For regression purposes, the MSE (mean squared error) is
 automatically chosen.}
 }

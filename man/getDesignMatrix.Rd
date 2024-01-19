@@ -8,10 +8,10 @@ getDesignMatrix(X, disj)
 }
 \arguments{
 \item{X}{The original (binary) predictor matrix. This has to be of type
-integer.}
+\code{integer}.}
 
 \item{disj}{The conjunction matrix which can, e.g., be extracted from a
-fitted \code{logicDT} model via $disj.}
+fitted \code{logicDT} model via \code{$disj}.}
 }
 \value{
 The transformed design matrix.
