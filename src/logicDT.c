@@ -99,8 +99,8 @@ double calcAUCSorted(double* predictions, int* y, int N) {
   }
   int N_1 = N - N_0;
 
-  double* preds_0 = (double*) Calloc(N_0, double);
-  double* preds_1 = (double*) Calloc(N_1, double);
+  double* preds_0 = (double*) R_Calloc(N_0, double);
+  double* preds_1 = (double*) R_Calloc(N_1, double);
 
   memcpy(preds_0, predictions, N_0 * sizeof(double));
   memcpy(preds_1, predictions + N_0, N_1 * sizeof(double));
@@ -139,14 +139,14 @@ double calcAUCSorted(double* predictions, int* y, int N) {
     ind_buffer_new = j;
   }
 
-  Free(preds_0);
-  Free(preds_1);
+  R_Free(preds_0);
+  R_Free(preds_1);
 
   return ranksum/(N_0 * N_1);
 }
 
 double calcAUCUnsorted(double* predictions, int* y, int N) {
-  y_prob_pair_t* y_probs = (y_prob_pair_t*) Calloc(N, y_prob_pair_t);
+  y_prob_pair_t* y_probs = (y_prob_pair_t*) R_Calloc(N, y_prob_pair_t);
 
   int i, j;
   int N_0 = 0;
@@ -197,7 +197,7 @@ double calcAUCUnsorted(double* predictions, int* y, int N) {
     ind_buffer_new = j;
   }
 
-  Free(y_probs);
+  R_Free(y_probs);
 
   return ranksum/(N_0 * N_1);
 }
@@ -290,7 +290,7 @@ SEXP vim_permutation_(SEXP ensemble, SEXP X_val_raw, SEXP y_val_raw, SEXP Z_val_
     N = length(VECTOR_ELT(permutation_raw, i));
 
     dm_val = getDesignMatrixIntern(INTEGER(VECTOR_ELT(X_val_raw, i)), N, INTEGER(disj_raw), n_conj, n_vars, real_n_conj);
-    dm_val_perm = (int*) Calloc(N * real_n_conj, int);
+    dm_val_perm = (int*) R_Calloc(N * real_n_conj, int);
 
     current_pet = VECTOR_ELT(ensemble, i);
     rebuild_tree(current_pet);
@@ -347,18 +347,18 @@ SEXP vim_permutation_(SEXP ensemble, SEXP X_val_raw, SEXP y_val_raw, SEXP Z_val_
       orig_scores[i*real_n_conj + var_index] = orig_score;
       perm_scores[i*real_n_conj + var_index] = perm_score;
 
-      Free(perm_preds_buffer->prob_preds);
+      R_Free(perm_preds_buffer->prob_preds);
       if(pred_type)
-        Free(perm_preds_buffer->class_preds);
-      Free(perm_preds_buffer);
+        R_Free(perm_preds_buffer->class_preds);
+      R_Free(perm_preds_buffer);
     }
 
-    Free(dm_val);
-    Free(dm_val_perm);
-    Free(orig_preds_buffer->prob_preds);
+    R_Free(dm_val);
+    R_Free(dm_val_perm);
+    R_Free(orig_preds_buffer->prob_preds);
     if(pred_type)
-      Free(orig_preds_buffer->class_preds);
-    Free(orig_preds_buffer);
+      R_Free(orig_preds_buffer->class_preds);
+    R_Free(orig_preds_buffer);
   }
 
   SEXP ret = PROTECT(allocVector(VECSXP, 3));
@@ -519,12 +519,12 @@ SEXP fitPETs_(SEXP X_train_raw, SEXP y_train_raw, SEXP X_val_raw, SEXP y_val_raw
     for(int i = 0; i < n_folds; i++) {
       SET_VECTOR_ELT(return_obj, i, C_PET_TO_R_PET(petsss[i], length(VECTOR_ELT(y_train_raw, i))));
     }
-    Free(petsss);
+    R_Free(petsss);
   } else {
     return_obj = PROTECT(ScalarReal(pets_intern->score));
   }
 
-  Free(pets_intern);
+  R_Free(pets_intern);
   UNPROTECT(1);
   return return_obj;
 }
@@ -559,11 +559,11 @@ pet_ensemble_t* fitPETsIntern(SEXP X_train_raw, SEXP y_train_raw, SEXP X_val_raw
 
   double scores = 0.0;
 
-  pet_ensemble_t* return_obj = (pet_ensemble_t*) Calloc(1, pet_ensemble_t);
+  pet_ensemble_t* return_obj = (pet_ensemble_t*) R_Calloc(1, pet_ensemble_t);
   return_obj->n_pets = n_folds;
 
   if(return_full_model)
-    return_obj->pets = (pet_t**) Calloc(n_folds, pet_t*);
+    return_obj->pets = (pet_t**) R_Calloc(n_folds, pet_t*);
 
   for (i = 0; i < n_folds; i++) {
     /*X_train = PROTECT(getDesignMatrix_(VECTOR_ELT(X_train_raw, i), disj_raw, real_n_conj_raw));*/
@@ -579,7 +579,7 @@ pet_ensemble_t* fitPETsIntern(SEXP X_train_raw, SEXP y_train_raw, SEXP X_val_raw
       Z_train = REAL(VECTOR_ELT(Z_train_raw, i));
 
     current_pet = fitPETIntern(X_train, bin_y_train, quant_y_train, y_bin, Z_train, N, real_n_conj, pZ, nodesize, split_criterion, alpha, cp, smoothing, mtry, covariable_mode);
-    Free(X_train);
+    R_Free(X_train);
 
     if(use_validation) {
       current_X_val = VECTOR_ELT(X_val_raw, i);
@@ -589,8 +589,8 @@ pet_ensemble_t* fitPETsIntern(SEXP X_train_raw, SEXP y_train_raw, SEXP X_val_raw
         Z_val = REAL(VECTOR_ELT(Z_val_raw, i));
       predictions_raw = predictIntern(current_pet->tree, X_val, Z_val, N_val, pred_type, 1);
       predictions = predictions_raw->prob_preds;
-      Free(predictions_raw);
-      Free(X_val);
+      R_Free(predictions_raw);
+      R_Free(X_val);
     } else {
       N_val = N;
       predictions = current_pet->train_preds;
@@ -612,7 +612,7 @@ pet_ensemble_t* fitPETsIntern(SEXP X_train_raw, SEXP y_train_raw, SEXP X_val_raw
     }
 
     if(use_validation)
-      Free(predictions);
+      R_Free(predictions);
 
     if(return_full_model) {
       (return_obj->pets)[i] = current_pet;
@@ -673,21 +673,21 @@ pet_t* fitPETIntern(int* X, int* bin_y, double* quant_y, int y_bin, double* Z, i
   int i, j;
 
 //  linked_list *splits_preds = malloc(sizeof(linked_list));
-  linked_list *splits_preds = (linked_list*) Calloc(1, linked_list);
+  linked_list *splits_preds = (linked_list*) R_Calloc(1, linked_list);
   splits_preds->next = NULL;
   linked_list *current_split_pred = splits_preds;
 
   /*SEXP train_preds_R = PROTECT(allocVector(REALSXP, N));
   double* train_preds = REAL(train_preds_R);*/
-  double* train_preds = (double*) Calloc(N, double);
+  double* train_preds = (double*) R_Calloc(N, double);
 
   logic_stack_t *stack = stack_new();
 
   node* tree;
-  tree = (node*) Calloc(1, node);
+  tree = (node*) R_Calloc(1, node);
   tree->left = NULL;
   tree->right = NULL;
-  tree->obs_ind = (int*) Calloc(N, int);
+  tree->obs_ind = (int*) R_Calloc(N, int);
   for(i = 0; i < N; i++) {
     (tree->obs_ind)[i] = i;
   }
@@ -769,12 +769,12 @@ pet_t* fitPETIntern(int* X, int* bin_y, double* quant_y, int y_bin, double* Z, i
   double N_k_sum, N_L_sum, N_R_sum;
   double N_k_sum_2, N_L_sum_2, N_R_sum_2;
 
-  int best_N_L;
+  int best_N_L = 0;
 
   double imp_k, imp_L, imp_R;
-  double best_imp_L, best_imp_R;
+  double best_imp_L = 0; double best_imp_R = 0;
 
-  double best_pred_L, best_pred_R;
+  double best_pred_L = 0; double best_pred_R = 0;
 
   int buffer_L, buffer_R;
 
@@ -795,16 +795,16 @@ pet_t* fitPETIntern(int* X, int* bin_y, double* quant_y, int y_bin, double* Z, i
   double p_value;
   double best_p_value;
   if(split_criterion > 0) {
-    fpl_L = (functional**) Calloc(p, functional*);
-    fpl_R = (functional**) Calloc(p, functional*);
+    fpl_L = (functional**) R_Calloc(p, functional*);
+    fpl_R = (functional**) R_Calloc(p, functional*);
     for(i = 0; i < p; i++) {
       fpl_L[i] = NULL; fpl_R[i] = NULL;
     }
-    ll_L = (double*) Calloc(p, double);
-    ll_R = (double*) Calloc(p, double);
-    predictions_fpl = (double*) Calloc(N, double);
-    obs_ind_L = (int*) Calloc(N, int);
-    obs_ind_R = (int*) Calloc(N, int);
+    ll_L = (double*) R_Calloc(p, double);
+    ll_R = (double*) R_Calloc(p, double);
+    predictions_fpl = (double*) R_Calloc(N, double);
+    obs_ind_L = (int*) R_Calloc(N, int);
+    obs_ind_R = (int*) R_Calloc(N, int);
   }
   double best_split_crit;
 
@@ -818,10 +818,10 @@ pet_t* fitPETIntern(int* X, int* bin_y, double* quant_y, int y_bin, double* Z, i
   int* available_vars_raw = NULL;
   int* available_vars = NULL;
   if(mtry > 0) {
-    available_vars_raw = (int*) Calloc(p, int);
+    available_vars_raw = (int*) R_Calloc(p, int);
     for(i = 0; i < p; i++)
       available_vars_raw[i] = i;
-    available_vars = (int*) Calloc(p, int);
+    available_vars = (int*) R_Calloc(p, int);
     GetRNGstate();
     n_split_cands = mtry;
   }
@@ -999,7 +999,7 @@ pet_t* fitPETIntern(int* X, int* bin_y, double* quant_y, int y_bin, double* Z, i
 
     y_Z_pair_t* Z_sorted;
     if(pZ > 0 && covariable_mode == 1)
-      Z_sorted = (y_Z_pair_t*) Calloc(N_k, y_Z_pair_t);
+      Z_sorted = (y_Z_pair_t*) R_Calloc(N_k, y_Z_pair_t);
 
     for (j = 0; j < pZ && covariable_mode == 1; j++) {
       N_L = 0;
@@ -1066,7 +1066,7 @@ pet_t* fitPETIntern(int* X, int* bin_y, double* quant_y, int y_bin, double* Z, i
     }
 
     if(pZ > 0 && covariable_mode == 1)
-      Free(Z_sorted);
+      R_Free(Z_sorted);
 
     // Stopping criterion #3
     if (best_index == -1) {
@@ -1078,7 +1078,7 @@ pet_t* fitPETIntern(int* X, int* bin_y, double* quant_y, int y_bin, double* Z, i
       if(split_criterion > 0) {
         for(i = 0; i < p; i++) {
           if(fpl_L[i] != NULL) {
-            Free(fpl_L[i]); Free(fpl_R[i]);
+            R_Free(fpl_L[i]); R_Free(fpl_R[i]);
             fpl_L[i] = NULL; fpl_R[i] = NULL;
           }
         }
@@ -1087,11 +1087,11 @@ pet_t* fitPETIntern(int* X, int* bin_y, double* quant_y, int y_bin, double* Z, i
       continue;
     }
 
-    left_child = (node*) Calloc(1, node); right_child = (node*) Calloc(1, node);
+    left_child = (node*) R_Calloc(1, node); right_child = (node*) R_Calloc(1, node);
     left_child->left = NULL; right_child->left = NULL;
     left_child->right = NULL; right_child->right = NULL;
     left_child->N_k = best_N_L; right_child->N_k = N_k - best_N_L;
-    left_child->obs_ind = (int*) Calloc(best_N_L, int); right_child->obs_ind = (int*) Calloc((N_k - best_N_L), int);
+    left_child->obs_ind = (int*) R_Calloc(best_N_L, int); right_child->obs_ind = (int*) R_Calloc((N_k - best_N_L), int);
     left_child->func_pred = NULL; right_child->func_pred = NULL;
     left_child->impurity = best_imp_L; right_child->impurity = best_imp_R;
     left_child->pred = best_pred_L; right_child->pred = best_pred_R;
@@ -1107,7 +1107,7 @@ pet_t* fitPETIntern(int* X, int* bin_y, double* quant_y, int y_bin, double* Z, i
       fpl_R[best_index] = NULL;
       for(i = 0; i < p; i++) {
         if(fpl_L[i] != NULL) {
-          Free(fpl_L[i]); Free(fpl_R[i]);
+          R_Free(fpl_L[i]); R_Free(fpl_R[i]);
           fpl_L[i] = NULL; fpl_R[i] = NULL;
         }
       }
@@ -1151,18 +1151,18 @@ pet_t* fitPETIntern(int* X, int* bin_y, double* quant_y, int y_bin, double* Z, i
 
   if(mtry > 0) {
     PutRNGstate();
-    Free(available_vars_raw);
-    Free(available_vars);
+    R_Free(available_vars_raw);
+    R_Free(available_vars);
   }
 
   if(split_criterion > 0) {
-    Free(obs_ind_L);
-    Free(obs_ind_R);
-    Free(ll_L);
-    Free(ll_R);
-    Free(predictions_fpl);
-    Free(fpl_L);
-    Free(fpl_R);
+    R_Free(obs_ind_L);
+    R_Free(obs_ind_R);
+    R_Free(ll_L);
+    R_Free(ll_R);
+    R_Free(predictions_fpl);
+    R_Free(fpl_L);
+    R_Free(fpl_R);
   }
 
   stack_destroy(stack);
@@ -1171,20 +1171,20 @@ pet_t* fitPETIntern(int* X, int* bin_y, double* quant_y, int y_bin, double* Z, i
   // If there is at least one quantitative covariable and 4pl or linear model fitting is desired,
   // use the first available covariable. (Additional ones are ignored.)
   if(pZ > 0 && covariable_mode >= 2) {
-    // ToDo: Free split models
+    // ToDo: R_Free split models
     model_list = functionalLeaves(tree, number_of_nodes, bin_y, quant_y, y_bin, Z, covariable_mode, (split_criterion + 1) == covariable_mode, 0);
     // Update train_preds:
     pet_preds_t* func_preds = predictIntern(tree, X, Z, N, 0, 1);
-    Free(train_preds);
+    R_Free(train_preds);
     train_preds = func_preds->prob_preds;
-    Free(func_preds);
+    R_Free(func_preds);
   }
 
-  int* splits_pointer = (int*) Calloc(number_of_nodes, int);
-  int* splits_bin_or_cont_pointer = (int*) Calloc(number_of_nodes, int);
-  double* split_points_pointer = (double*) Calloc(number_of_nodes, double);
-  double* preds_pointer = (double*) Calloc(number_of_nodes, double);
-  double* split_crit_pointer = (double*) Calloc(number_of_nodes, double);
+  int* splits_pointer = (int*) R_Calloc(number_of_nodes, int);
+  int* splits_bin_or_cont_pointer = (int*) R_Calloc(number_of_nodes, int);
+  double* split_points_pointer = (double*) R_Calloc(number_of_nodes, double);
+  double* preds_pointer = (double*) R_Calloc(number_of_nodes, double);
+  double* split_crit_pointer = (double*) R_Calloc(number_of_nodes, double);
 
   linked_list* old_element;
   for(i = 0; i < number_of_nodes; i++) {
@@ -1196,11 +1196,11 @@ pet_t* fitPETIntern(int* X, int* bin_y, double* quant_y, int y_bin, double* Z, i
 
     old_element = splits_preds;
     splits_preds = splits_preds->next;
-    Free(old_element);
+    R_Free(old_element);
   }
-  Free(splits_preds);
+  R_Free(splits_preds);
 
-  pet_t* pet = (pet_t*) Calloc(1, pet_t);
+  pet_t* pet = (pet_t*) R_Calloc(1, pet_t);
   pet->splits = splits_pointer;
   pet->splits_bin_or_cont = splits_bin_or_cont_pointer;
   pet->split_points = split_points_pointer;
@@ -1233,14 +1233,14 @@ SEXP predict_(SEXP pet, SEXP X_raw, SEXP Z_raw, SEXP type_raw, SEXP leaves_raw) 
   if(type == 1) {
     ret = PROTECT(allocVector(INTSXP, N));
     memcpy(INTEGER(ret), pet_preds->class_preds, N * sizeof(int));
-    Free(pet_preds->class_preds);
+    R_Free(pet_preds->class_preds);
   } else {
     ret = PROTECT(allocVector(REALSXP, N));
     memcpy(REAL(ret), pet_preds->prob_preds, N * sizeof(double));
   }
 
-  Free(pet_preds->prob_preds);
-  Free(pet_preds);
+  R_Free(pet_preds->prob_preds);
+  R_Free(pet_preds);
 
   UNPROTECT(1);
   return ret;
@@ -1249,7 +1249,7 @@ SEXP predict_(SEXP pet, SEXP X_raw, SEXP Z_raw, SEXP type_raw, SEXP leaves_raw) 
 pet_preds_t* predictIntern(node* tree, int* X, double* Z, int N, int type, int leaves) {
   node* current_node;
 
-  double* prob_preds_pointer = (double*) Calloc(N, double);
+  double* prob_preds_pointer = (double*) R_Calloc(N, double);
   int* class_preds_pointer = NULL;
 
   int i;
@@ -1279,7 +1279,7 @@ pet_preds_t* predictIntern(node* tree, int* X, double* Z, int N, int type, int l
   }
 
   if (type == 1) {
-    class_preds_pointer = (int*) Calloc(N, int);
+    class_preds_pointer = (int*) R_Calloc(N, int);
     for (i = 0; i < N; i++) {
       if (prob_preds_pointer[i] > 0.5)
         class_preds_pointer[i] = 1;
@@ -1288,7 +1288,7 @@ pet_preds_t* predictIntern(node* tree, int* X, double* Z, int N, int type, int l
     }
   }
 
-  pet_preds_t* ret_pointer = (pet_preds_t*) Calloc(1, pet_preds_t);
+  pet_preds_t* ret_pointer = (pet_preds_t*) R_Calloc(1, pet_preds_t);
   ret_pointer->class_preds = class_preds_pointer;
   ret_pointer->prob_preds = prob_preds_pointer;
   return ret_pointer;
@@ -1307,7 +1307,7 @@ SEXP getDesignMatrix_(SEXP X_raw, SEXP disj_raw, SEXP real_n_conj_raw) {
 
   SEXP design_matrix_raw = PROTECT(allocMatrix(INTSXP, N, real_n_conj));
   memcpy(INTEGER(design_matrix_raw), dm, N * real_n_conj * sizeof(int));
-  Free(dm);
+  R_Free(dm);
 
   int max_var_length;
   if (p < 10)
@@ -1318,7 +1318,7 @@ SEXP getDesignMatrix_(SEXP X_raw, SEXP disj_raw, SEXP real_n_conj_raw) {
     max_var_length = 4;
   int conj_length = n_vars * (max_var_length + 1);
   /*char* str_buffer = malloc(conj_length * real_n_conj * sizeof(char));*/
-  char* str_buffer = (char*) Calloc(conj_length * real_n_conj, char);
+  char* str_buffer = (char*) R_Calloc(conj_length * real_n_conj, char);
 
   int written_chars;
 
@@ -1342,7 +1342,7 @@ SEXP getDesignMatrix_(SEXP X_raw, SEXP disj_raw, SEXP real_n_conj_raw) {
   setAttrib(design_matrix_raw, R_DimNamesSymbol, dimnames);
 
   /*free(str_buffer);*/
-  Free(str_buffer);
+  R_Free(str_buffer);
   UNPROTECT(3);
   return design_matrix_raw;
 }
@@ -1350,7 +1350,7 @@ SEXP getDesignMatrix_(SEXP X_raw, SEXP disj_raw, SEXP real_n_conj_raw) {
 int* getDesignMatrixIntern(int* X, int N, int* disj, int n_conj, int n_vars, int real_n_conj) {
   // int real_n_conj = arrangeNAs(disj, n_conj, n_vars);
 
-  int* design_matrix = (int*) Calloc(N * real_n_conj, int);
+  int* design_matrix = (int*) R_Calloc(N * real_n_conj, int);
 
   int i, j, k;
   for (k = 0; k < N; k++) {
@@ -1447,10 +1447,10 @@ int stack_destroy(logic_stack_t *stack) {
     struct stack_frame_s *frame = stack->top;
     stack->top = frame->next;
     /*free(frame);*/
-    Free(frame);
+    R_Free(frame);
   }
   /*free(stack);*/
-  Free(stack);
+  R_Free(stack);
   return SUCCESS;
 }
 
@@ -1464,7 +1464,7 @@ int stack_empty(logic_stack_t *stack) {
 
 logic_stack_t *stack_new(void) {
   /*logic_stack_t *stack = malloc(sizeof(*stack));*/
-  logic_stack_t *stack = (logic_stack_t*) Calloc(1, logic_stack_t);
+  logic_stack_t *stack = (logic_stack_t*) R_Calloc(1, logic_stack_t);
   if (stack == NULL) {
     return NULL;
   }
@@ -1480,7 +1480,7 @@ void *stack_pop(logic_stack_t *stack) {
   void *data = frame->data;
   stack->top = frame->next;
   /*free(frame);*/
-  Free(frame);
+  R_Free(frame);
   return data;
 }
 
@@ -1496,7 +1496,7 @@ void *queue_pop(logic_stack_t *stack) {
     void *data = frame->data;
     stack->top = NULL;
     /*free(frame);*/
-    Free(frame);
+    R_Free(frame);
     return data;
   }
 
@@ -1508,7 +1508,7 @@ void *queue_pop(logic_stack_t *stack) {
   void *data = frame2->data;
   frame->next = NULL;
   /*free(frame2);*/
-  Free(frame2);
+  R_Free(frame2);
   return data;
 }
 
@@ -1517,7 +1517,7 @@ int stack_push(logic_stack_t *stack, void *data) {
     return ERR_INVAL;
   }
   /*struct stack_frame_s *frame = malloc(sizeof(*frame));*/
-  struct stack_frame_s *frame = (stack_frame_t*) Calloc(1, stack_frame_t);
+  struct stack_frame_s *frame = (stack_frame_t*) R_Calloc(1, stack_frame_t);
   if (frame == NULL) {
     return ERR_NOMEM;
   }
@@ -1561,24 +1561,24 @@ void tree_destroy(node* tree) {
   if (tree->right != NULL)
     tree_destroy(tree->right);
   if (tree->obs_ind != NULL)
-    Free(tree->obs_ind);
+    R_Free(tree->obs_ind);
   if (tree->func_pred != NULL)
-    Free(tree->func_pred);
-  Free(tree);
+    R_Free(tree->func_pred);
+  R_Free(tree);
 }
 
 void pet_destroy(pet_t* pet, int destroy_tree) {
   if(destroy_tree)
     tree_destroy(pet->tree);
-  Free(pet->splits);
-  Free(pet->splits_bin_or_cont);
-  Free(pet->split_points);
-  Free(pet->preds);
-  Free(pet->split_crit);
-  Free(pet->train_preds);
+  R_Free(pet->splits);
+  R_Free(pet->splits_bin_or_cont);
+  R_Free(pet->split_points);
+  R_Free(pet->preds);
+  R_Free(pet->split_crit);
+  R_Free(pet->train_preds);
   if(pet->model_list != NULL)
-    Free(pet->model_list);
-  Free(pet);
+    R_Free(pet->model_list);
+  R_Free(pet);
 }
 
 void rebuild_tree(SEXP pet) {
@@ -1600,7 +1600,7 @@ void rebuild_tree(SEXP pet) {
 
 
   node* tree;
-  tree = (node*) Calloc(1, node);
+  tree = (node*) R_Calloc(1, node);
   node* current_node = tree;
   tree->left = NULL;
   tree->right = NULL;
@@ -1610,7 +1610,7 @@ void rebuild_tree(SEXP pet) {
   tree->pred = preds[0];
   if(splits[0] != 0) tree->leaf = 0; else tree->leaf = 1;
   if(func_buffer != NULL) {
-    tree->func_pred = (functional*) Calloc(1, functional);
+    tree->func_pred = (functional*) R_Calloc(1, functional);
     tree->func_pred->y_bin = y_bin;
     tree->func_pred->func_type = func_type;
     tree->func_pred->b = func_buffer[0];
@@ -1624,12 +1624,12 @@ void rebuild_tree(SEXP pet) {
 
   for(int i = 0; i < number_of_nodes; i++) {
     if(splits[i] != 0) {
-      current_node->left = (node*) Calloc(1, node);
+      current_node->left = (node*) R_Calloc(1, node);
       stack_push(stack, current_node);
       current_node = current_node->left;
     } else if(i+1 < number_of_nodes) {
       current_node = stack_pop(stack);
-      current_node->right = (node*) Calloc(1, node);
+      current_node->right = (node*) R_Calloc(1, node);
       current_node = current_node->right;
     }
 
@@ -1641,7 +1641,7 @@ void rebuild_tree(SEXP pet) {
       if(splits[i+1] != 0) current_node->leaf = 0; else current_node->leaf = 1;
       if(covariable_mode >= 2 && splits[i+1] == 0) {
         func_buffer = REAL(VECTOR_ELT(VECTOR_ELT(model_list_R, i+1), 0));
-        current_node->func_pred = (functional*) Calloc(1, functional);
+        current_node->func_pred = (functional*) R_Calloc(1, functional);
         current_node->func_pred->y_bin = y_bin;
         current_node->func_pred->func_type = func_type;
         current_node->func_pred->b = func_buffer[0];
@@ -1667,14 +1667,14 @@ linked_list* set_values_and_next(linked_list* l, int split, int split_bin_or_con
   l->pred = pred;
   l->split_crit = split_crit;
   /*l->next = (linked_list*) malloc(sizeof(linked_list));*/
-  l->next = (linked_list*) Calloc(1, linked_list);
+  l->next = (linked_list*) R_Calloc(1, linked_list);
   return l->next;
 }
 
 // 4pl model inside terminal nodes
 functional** functionalLeaves(node* tree, int number_of_nodes, int* bin_y, double* quant_y, int y_bin, double* Z, int covariable_mode, int already_fitted, int all_nodes) {
   node* current_node;
-  functional** model_list = (functional**) Calloc(number_of_nodes, functional*);
+  functional** model_list = (functional**) R_Calloc(number_of_nodes, functional*);
   logic_stack_t *stack = stack_new();
   stack_push(stack, tree);
   int i = 0;
@@ -1684,7 +1684,7 @@ functional** functionalLeaves(node* tree, int number_of_nodes, int* bin_y, doubl
     if(current_node->leaf || all_nodes) {
       if(!already_fitted) {
         if(current_node->func_pred != NULL)
-          Free(current_node->func_pred);
+          R_Free(current_node->func_pred);
         if(covariable_mode == 2)
           current_node->func_pred = fit4plModel(bin_y, quant_y, y_bin, current_node->pred, Z, current_node->N_k, current_node->obs_ind);
         else if(covariable_mode == 3 || !y_bin)
@@ -1835,7 +1835,7 @@ void numericalGrad(int n, double* par, double* gr, void* ex) {
   memset(gr, 0, n * sizeof(double));
   dataset* data = ex;
   optimfn* fn = data->fn;
-  double* par_copy = (double*) Calloc(n, double);
+  double* par_copy = (double*) R_Calloc(n, double);
   memcpy(par_copy, par, n * sizeof(double));
   double h = 6.055454e-06; // Cube-root of machine epsilon 2.220446e-16
   double buf;
@@ -1847,7 +1847,7 @@ void numericalGrad(int n, double* par, double* gr, void* ex) {
     gr[i] = (buf - fn(n, par_copy, ex))/(2.0 * h);
     par_copy[i] = par[i];
   }
-  Free(par_copy);
+  R_Free(par_copy);
   for(int i = 0; i < n; i++) gr[i] *= par_scale[i];
 }
 
@@ -1857,7 +1857,7 @@ SEXP fit4plModel_(SEXP y, SEXP Z) {
   int y_bin = 0;
   int N = length(y);
   double* Z2 = REAL(Z);
-  int* obs_ind = (int*) Calloc(N, int);
+  int* obs_ind = (int*) R_Calloc(N, int);
   if(isInteger(y)) {
     bin_y = INTEGER(y);
     y_bin = 1;
@@ -1884,8 +1884,8 @@ SEXP fit4plModel_(SEXP y, SEXP Z) {
   model_pointer[1] = model->c;
   model_pointer[2] = model->d;
   model_pointer[3] = model->e;
-  Free(obs_ind);
-  Free(model);
+  R_Free(obs_ind);
+  R_Free(model);
   // Assign class "4pl"
   classgets(model_R, mkString("4pl"));
   UNPROTECT(1);
@@ -1899,7 +1899,7 @@ functional* fit4plModel(int* bin_y, double* quant_y, int y_bin, double y_mean, d
   double b, c, d, e;
   double scaler = 0.001;
 
-  functional* ret = (functional*) Calloc(1, functional);
+  functional* ret = (functional*) R_Calloc(1, functional);
   ret->y_bin = y_bin;
   ret->func_type = 0;
 
@@ -1937,9 +1937,9 @@ functional* fit4plModel(int* bin_y, double* quant_y, int y_bin, double y_mean, d
     gr = &squaredErrorGrad;
   }
   // Response for linear model finding initial values for b and e
-  double* initResp = (double*) Calloc(N, double);
+  double* initResp = (double*) R_Calloc(N, double);
   // Z2 to ensure that each entry in Z2 corresponds to each entry in initResp
-  double* Z2 = (double*) Calloc(N, double);
+  double* Z2 = (double*) R_Calloc(N, double);
   if(y_bin) {
     for(int i = 0; i < N; i++)
       initResp[i] = log((d-bin_y[obs_ind[i]])/(bin_y[obs_ind[i]]-c));
@@ -1952,16 +1952,16 @@ functional* fit4plModel(int* bin_y, double* quant_y, int y_bin, double y_mean, d
   double* initialPars = fitLinModel(Z2, initResp, N);
   b = initialPars[1];
   e = -initialPars[0]/b;
-  Free(initResp);
-  Free(Z2);
-  Free(initialPars);
+  R_Free(initResp);
+  R_Free(Z2);
+  R_Free(initialPars);
   // Scale parameters
-  double* Pars = (double*) Calloc(4, double);
+  double* Pars = (double*) R_Calloc(4, double);
   Pars[0] = b;
   Pars[1] = c;
   Pars[2] = d;
   Pars[3] = e;
-  double* par_scale = (double*) Calloc(4, double);
+  double* par_scale = (double*) R_Calloc(4, double);
   memcpy(par_scale, Pars, 4 * sizeof(double));
   for(int i = 0; i < 4; i++) {
     par_scale[i] = fabs(par_scale[i]);
@@ -1971,12 +1971,12 @@ functional* fit4plModel(int* bin_y, double* quant_y, int y_bin, double y_mean, d
   double min_val = 0;
   int maxit = 500; // Standard value 100
   int trace = 0;
-  int* mask = (int*) Calloc(4, int);
+  int* mask = (int*) R_Calloc(4, int);
 	for (int i = 0; i < 4; i++) mask[i] = 1;
   double abstol = R_NegInf;
   double reltol = 1e-7; // Standard value 1.490116e-08
   int nREPORT = 10;
-  dataset* ex = (dataset*) Calloc(1, dataset);
+  dataset* ex = (dataset*) R_Calloc(1, dataset);
   ex->bin_y = bin_y;
   ex->quant_y = quant_y;
   ex->Z = Z;
@@ -2017,10 +2017,10 @@ functional* fit4plModel(int* bin_y, double* quant_y, int y_bin, double y_mean, d
     ret->d = Pars[2] * par_scale[2];
     ret->e = Pars[3] * par_scale[3];
   }
-  Free(Pars);
-  Free(par_scale);
-  Free(mask);
-  Free(ex);
+  R_Free(Pars);
+  R_Free(par_scale);
+  R_Free(mask);
+  R_Free(ex);
   return ret;
 }
 
@@ -2054,7 +2054,7 @@ double* fitLinModel(double* x, double* y, int N) {
     numerator += x[i] * y[i];
     denominator += x[i] * x[i];
   }
-  double* beta = (double*) Calloc(2, double);
+  double* beta = (double*) R_Calloc(2, double);
   beta[1] = (numerator - N * x_mean * y_mean)/(denominator - N * x_mean * x_mean);
   beta[0] = y_mean - beta[1] * x_mean;
   return beta;
@@ -2066,7 +2066,7 @@ SEXP fitLinearModel_(SEXP y, SEXP Z, SEXP logistic) {
   int y_bin = 0;
   int N = length(y);
   double* Z2 = REAL(Z);
-  int* obs_ind = (int*) Calloc(N, int);
+  int* obs_ind = (int*) R_Calloc(N, int);
   if(isInteger(y)) {
     bin_y = INTEGER(y);
     y_bin = 1;
@@ -2097,8 +2097,8 @@ SEXP fitLinearModel_(SEXP y, SEXP Z, SEXP logistic) {
   model_pointer[1] = model->c;
   model_pointer[2] = model->d;
   model_pointer[3] = model->e;
-  Free(obs_ind);
-  Free(model);
+  R_Free(obs_ind);
+  R_Free(model);
   // Assign class "linear"
   classgets(model_R, mkString("linear"));
   UNPROTECT(1);
@@ -2117,7 +2117,7 @@ functional* fitLinearModel(int* bin_y, double* quant_y, int y_bin, double y_mean
     numerator += Z[obs_ind[i]] * quant_y[obs_ind[i]];
     denominator += Z[obs_ind[i]] * Z[obs_ind[i]];
   }
-  functional* func_pred = (functional*) Calloc(1, functional);
+  functional* func_pred = (functional*) R_Calloc(1, functional);
   func_pred->y_bin = y_bin;
   func_pred->func_type = 1;
   func_pred->c = (numerator - N * x_mean * y_mean)/(denominator - N * x_mean * x_mean);
@@ -2149,7 +2149,7 @@ functional* fitLDAModel(int* bin_y, double* quant_y, int y_bin, double y_mean, d
   }
   sigma2 /= N - 2;
 
-  functional* func_pred = (functional*) Calloc(1, functional);
+  functional* func_pred = (functional*) R_Calloc(1, functional);
   func_pred->y_bin = y_bin;
   func_pred->func_type = 1;
   func_pred->b = log(y_mean/(1.0 - y_mean)) - 0.5 * (mu_1 + mu_0) * (mu_1 - mu_0) / sigma2;

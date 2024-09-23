@@ -36,10 +36,10 @@ double buildModel(SEXP X_train, SEXP y_train, SEXP Z_train, SEXP Z_val, int* dis
 
     pet_ensemble_t* eval = fitPETsIntern(X_train, y_train, X_val, y_val, Z_train, Z_val, use_validation, y_bin, nodesize, split_criterion, alpha, cp, smoothing, mtry, covariable_mode, disj, n_conj, n_vars, real_n_conj, scoring_rule, gamma, 0);
     double score = eval->score;
-    Free(eval);
-    eval_models_list* new_model_entry = (eval_models_list*) Calloc(1, eval_models_list);
+    R_Free(eval);
+    eval_models_list* new_model_entry = (eval_models_list*) R_Calloc(1, eval_models_list);
     new_model_entry->score = score;
-    new_model_entry->disj = (int*) Calloc(total_length, int);
+    new_model_entry->disj = (int*) R_Calloc(total_length, int);
     memcpy(new_model_entry->disj, disj, total_length * sizeof(int));
     new_model_entry->next = model_entry;
     if(change_start_point) models[hash] = new_model_entry;
@@ -49,7 +49,7 @@ double buildModel(SEXP X_train, SEXP y_train, SEXP Z_train, SEXP Z_val, int* dis
 
   pet_ensemble_t* eval = fitPETsIntern(X_train, y_train, X_val, y_val, Z_train, Z_val, use_validation, y_bin, nodesize, split_criterion, alpha, cp, smoothing, mtry, covariable_mode, disj, n_conj, n_vars, real_n_conj, scoring_rule, gamma, 0);
   double score = eval->score;
-  Free(eval);
+  R_Free(eval);
   return score;
 }
 
@@ -67,7 +67,7 @@ sa_eval_t* evaluateModel(SEXP X_train, SEXP y_train, SEXP Z_train, SEXP Z_val, d
     rnd = -t;
   }
 
-  sa_eval_t* ret_obj = (sa_eval_t*) Calloc(1, sa_eval_t);
+  sa_eval_t* ret_obj = (sa_eval_t*) R_Calloc(1, sa_eval_t);
 
   if(acc > rnd) {
     ret_obj->score = new_score;
@@ -136,7 +136,7 @@ void calcSharedFitness(gen_t* generation, int n_ind, int max_conj, int max_vars,
 }
 
 int* tournamentSelection(gen_t* generation, int n_ind, int k) {
-  int* ret = (int*) Calloc(k, int);
+  int* ret = (int*) R_Calloc(k, int);
   for(int i = 0; i < k; i++) {
     ret[i] = unif_rand() * n_ind;
   }
@@ -168,7 +168,7 @@ int* mutateGeneration(gen_t* generation, int n_ind, int max_vars, int max_conj, 
   if((type == 3 && (n_conj == max_conj || max_vars <= n_vars_total)) || (type == 4 && (n_conj == 1 || !allow_conj_removal)))
     return NULL;
 
-  int* disj2 = (int*) Calloc(max_vars * max_conj, int);
+  int* disj2 = (int*) R_Calloc(max_vars * max_conj, int);
   memcpy(disj2, disj_temp, max_vars * max_conj * sizeof(int));
 
   if(type < 3) {
@@ -182,7 +182,7 @@ int* mutateGeneration(gen_t* generation, int n_ind, int max_vars, int max_conj, 
     }
 
     if((type == 1 && max_vars <= n_vars_total) || (type == 2 && n_vars_here == 1)) {
-      Free(disj2);
+      R_Free(disj2);
       return NULL;
     }
 
@@ -190,9 +190,9 @@ int* mutateGeneration(gen_t* generation, int n_ind, int max_vars, int max_conj, 
     int which_var = rnd * n_vars_here;
 
     if(type < 2) {
-      int* unused_vars = (int*) Calloc(p, int);
+      int* unused_vars = (int*) R_Calloc(p, int);
       memset(unused_vars, 0, p * sizeof(int));
-      int* available_vars = (int*) Calloc(2 * p, int);
+      int* available_vars = (int*) R_Calloc(2 * p, int);
       for(i = 0; i < n_vars_here; i++) {
         unused_vars[abs(disj_temp[i * max_conj + which_conj]) - 1] = 1;
       }
@@ -219,8 +219,8 @@ int* mutateGeneration(gen_t* generation, int n_ind, int max_vars, int max_conj, 
         int add_var = rnd * j;
         disj2[n_vars_here * max_conj + which_conj] = available_vars[add_var];
       }
-      Free(unused_vars);
-      Free(available_vars);
+      R_Free(unused_vars);
+      R_Free(available_vars);
     } else {
       disj2[which_var * max_conj + which_conj] = disj2[(n_vars_here-1) * max_conj + which_conj];
       disj2[(n_vars_here-1) * max_conj + which_conj] = NA_INTEGER;
@@ -306,8 +306,8 @@ gp_eval_t* geneticProgrammingStep(SEXP X_train, SEXP y_train, int max_vars, int 
     conj_ind11 = conj_ind2;
   }
 
-  generation[n_ind].disj = (int*) Calloc(max_vars * max_conj, int);
-  generation[n_ind + 1].disj = (int*) Calloc(max_vars * max_conj, int);
+  generation[n_ind].disj = (int*) R_Calloc(max_vars * max_conj, int);
+  generation[n_ind + 1].disj = (int*) R_Calloc(max_vars * max_conj, int);
   memcpy(generation[n_ind].disj, generation[cross_ind1].disj, max_vars * max_conj * sizeof(int));
   memcpy(generation[n_ind + 1].disj, generation[cross_ind2].disj, max_vars * max_conj * sizeof(int));
   int i;
@@ -348,7 +348,7 @@ gp_eval_t* geneticProgrammingStep(SEXP X_train, SEXP y_train, int max_vars, int 
     }
   }
 
-  gp_eval_t* ret = (gp_eval_t*) Calloc(1, gp_eval_t);
+  gp_eval_t* ret = (gp_eval_t*) R_Calloc(1, gp_eval_t);
   ret->generation = generation;
   ret->n_ind = n_ind;
   ret->iter = iter;
@@ -387,14 +387,14 @@ SEXP geneticProgramming_(SEXP X_train, SEXP y_train, SEXP max_vars_raw, SEXP max
   double best_score = 0;
   double best_fitness = 0;
 
-  eval_models_list** models = (eval_models_list**) Calloc(PRIME, eval_models_list*);
+  eval_models_list** models = (eval_models_list**) R_Calloc(PRIME, eval_models_list*);
   prevented_evals = 0;
 
   GetRNGstate();
 
-  gen_t* generation = (gen_t*) Calloc(allocd, gen_t);
+  gen_t* generation = (gen_t*) R_Calloc(allocd, gen_t);
   for(int i = 0; i < n_ind; i++) {
-    generation[i].disj = (int*) Calloc(n_vars * n_conj, int);
+    generation[i].disj = (int*) R_Calloc(n_vars * n_conj, int);
     for(int j = 0; j < n_vars * n_conj; j++) {
       generation[i].disj[j] = NA_INTEGER;
     }
@@ -413,7 +413,7 @@ SEXP geneticProgramming_(SEXP X_train, SEXP y_train, SEXP max_vars_raw, SEXP max
   for(int i = 0; i < max_gen; i++) {
     if(allocd < n_ind + reserved_slots) {
       allocd += 1000;
-      generation = (gen_t*) Realloc(generation, allocd, gen_t);
+      generation = (gen_t*) R_Realloc(generation, allocd, gen_t);
     }
 
     current_eval = geneticProgrammingStep(X_train, y_train, n_vars, n_conj, Z_train, Z_val, generation, n_ind, best_score, nodesize, split_criterion, alpha, cp, smoothing, mtry, covariable_mode, scoring_rule, gamma, X_val, y_val, use_validation, y_bin, allow_conj_removal, conjsize, X, models);
@@ -444,7 +444,7 @@ SEXP geneticProgramming_(SEXP X_train, SEXP y_train, SEXP max_vars_raw, SEXP max
           n_ind++;
           l++;
         } else {
-          Free(generation[l].disj);
+          R_Free(generation[l].disj);
           for(int k = l; k < current_eval->n_ind - 1 - m; k++) {
             generation[k].disj = generation[k+1].disj;
             generation[k].score = generation[k+1].score;
@@ -456,7 +456,7 @@ SEXP geneticProgramming_(SEXP X_train, SEXP y_train, SEXP max_vars_raw, SEXP max
     } else {
       n_ind = current_eval->n_ind;
     }
-    Free(current_eval);
+    R_Free(current_eval);
 
     Rprintf("\r Generation %d/%d (%.0f%%) | Number of Individuals: %d", i+1, max_gen, (double) (i+1)/max_gen * 100, n_ind);
   }
@@ -471,7 +471,7 @@ SEXP geneticProgramming_(SEXP X_train, SEXP y_train, SEXP max_vars_raw, SEXP max
   qsort(generation, n_ind, sizeof(gen_t), cmp_gen_conj);
   for(int i = 0; i < n_ind - 1; i++) {
     while((generation[i+1].disj != NULL) && (cmp_disj_fixed(generation[i].disj, generation[i+1].disj) == 0)) {
-      Free(generation[i+1].disj);
+      R_Free(generation[i+1].disj);
       for(int k = i+1; k < n_ind - 1; k++) {
         generation[k].disj = generation[k+1].disj;
         generation[k].score = generation[k+1].score;
@@ -494,7 +494,7 @@ SEXP geneticProgramming_(SEXP X_train, SEXP y_train, SEXP max_vars_raw, SEXP max
     memcpy(INTEGER(disj_R), generation[i].disj, n_conj * n_vars * sizeof(int));
     SET_VECTOR_ELT(disjs, i, disj_R);
     scores_pointer[i] = generation[i].score;
-    Free(generation[i].disj);
+    R_Free(generation[i].disj);
   }
 
   SET_VECTOR_ELT(ret_obj, 0, disjs);
@@ -503,7 +503,7 @@ SEXP geneticProgramming_(SEXP X_train, SEXP y_train, SEXP max_vars_raw, SEXP max
   SET_VECTOR_ELT(ret_obj, 3, ScalarInteger(prevented_evals));
   SET_VECTOR_ELT(ret_obj, 4, ScalarReal(best_score));
 
-  Free(generation);
+  R_Free(generation);
   UNPROTECT(3 + n_ind);
   return ret_obj;
 }
@@ -567,10 +567,10 @@ SEXP predictGP_(SEXP model, SEXP X_raw, SEXP Z_raw, SEXP type_raw, SEXP n_models
       for(int k = 0; k < N; k++) {
         prob_preds[k] += (pet_preds->prob_preds)[k];
       }
-      Free(pet_preds->prob_preds);
-      Free(pet_preds);
+      R_Free(pet_preds->prob_preds);
+      R_Free(pet_preds);
     }
-    Free(dm);
+    R_Free(dm);
   }
 
   for(int k = 0; k < N; k++) {
@@ -584,7 +584,7 @@ SEXP predictGP_(SEXP model, SEXP X_raw, SEXP Z_raw, SEXP type_raw, SEXP n_models
 sa_eval_t* simulatedAnnealingStep(SEXP X_train, SEXP y_train, int max_vars, int max_conj, SEXP Z_train, SEXP Z_val, int* disj, int n_conj_raw, int n_vars_raw, double t, int acc_type, double score, int nodesize, int split_criterion, double alpha, double cp, int smoothing, int mtry, int covariable_mode, int scoring_rule, double gamma, SEXP X_val, SEXP y_val, int use_validation, int y_bin, int allow_conj_removal, int conjsize, SEXP X, eval_models_list** models) {
   int p = ncols(VECTOR_ELT(X_train, 0));
 
-  int* disj2 = (int*) Calloc(n_conj_raw * n_vars_raw, int);
+  int* disj2 = (int*) R_Calloc(n_conj_raw * n_vars_raw, int);
   memcpy(disj2, disj, n_conj_raw * n_vars_raw * sizeof(int));
 
   int n_conj;
@@ -592,7 +592,7 @@ sa_eval_t* simulatedAnnealingStep(SEXP X_train, SEXP y_train, int max_vars, int 
     if(disj2[n_conj] == NA_INTEGER)
       break;
   }
-  int* n_vars = (int*) Calloc(n_conj, int);
+  int* n_vars = (int*) R_Calloc(n_conj, int);
   int n_vars_total = 0;
   int i, j;
   for(i = 0; i < n_conj; i++) {
@@ -610,7 +610,7 @@ sa_eval_t* simulatedAnnealingStep(SEXP X_train, SEXP y_train, int max_vars, int 
   int poss_add_moves = 2 * p * (n_conj < max_conj) * (n_vars_total < max_vars);
   int poss_rem_moves = n_conj * (n_conj > 1) * allow_conj_removal;
 
-  int* poss_mod_moves = (int*) Calloc(n_conj, int);
+  int* poss_mod_moves = (int*) R_Calloc(n_conj, int);
   int poss_mod_moves_count = 0;
 
   for(i = 0; i < n_conj; i++) {
@@ -665,9 +665,9 @@ sa_eval_t* simulatedAnnealingStep(SEXP X_train, SEXP y_train, int max_vars, int 
     else
       mod_move = 2;
 
-    int* unused_vars = (int*) Calloc(p, int);
+    int* unused_vars = (int*) R_Calloc(p, int);
     memset(unused_vars, 0, p * sizeof(int));
-    int* available_vars = (int*) Calloc(2 * p, int);
+    int* available_vars = (int*) R_Calloc(2 * p, int);
     for(i = 0; i < n_vars_here; i++) {
       unused_vars[abs(disj2[i * n_conj_raw + which_conj]) - 1] = 1;
     }
@@ -713,8 +713,8 @@ sa_eval_t* simulatedAnnealingStep(SEXP X_train, SEXP y_train, int max_vars, int 
       disj2[(n_vars_here-1) * n_conj_raw + which_conj] = NA_INTEGER;
     }
 
-    Free(unused_vars);
-    Free(available_vars);
+    R_Free(unused_vars);
+    R_Free(available_vars);
 
   } else if (main_move == 0) {
     rnd = unif_rand();
@@ -739,11 +739,11 @@ sa_eval_t* simulatedAnnealingStep(SEXP X_train, SEXP y_train, int max_vars, int 
 
   PutRNGstate();
 
-  Free(n_vars);
-  Free(poss_mod_moves);
+  R_Free(n_vars);
+  R_Free(poss_mod_moves);
 
   if(main_move == 2 && (mod_move == 2 || mod_move == 0)) {
-    int* sub_disj = (int*) Calloc(n_vars_raw, int);
+    int* sub_disj = (int*) R_Calloc(n_vars_raw, int);
     for(i = 0; i < n_vars_raw; i++) {
       sub_disj[i] = disj2[i * n_conj_raw + which_conj];
     }
@@ -752,11 +752,11 @@ sa_eval_t* simulatedAnnealingStep(SEXP X_train, SEXP y_train, int max_vars, int 
     for(i = 0; i < nrows(X); i++) {
       conjsum += dm[i];
     }
-    Free(dm);
-    Free(sub_disj);
+    R_Free(dm);
+    R_Free(sub_disj);
 
     if (conjsum < conjsize || conjsum > nrows(X) - conjsize) {
-      Free(disj2);
+      R_Free(disj2);
       return simulatedAnnealingStep(X_train, y_train, max_vars, max_conj, Z_train, Z_val, disj, n_conj_raw, n_vars_raw, t, acc_type, score, nodesize, split_criterion, alpha, cp, smoothing, mtry, covariable_mode, scoring_rule, gamma, X_val, y_val, use_validation, y_bin, allow_conj_removal, conjsize, X, models);
     }
   }
@@ -787,8 +787,8 @@ SEXP simulatedAnnealing_(SEXP X_train, SEXP y_train, SEXP max_vars_raw, SEXP max
   int print_iter = asInteger(getListElement(cooling_schedule, "print_iter"));
   //SEXP eval, disj2, min_conj, t_package;
   double min_score = asReal(score);
-  int* current_acc = (int*) Calloc(markov_iter, int);
-  double* current_scores = (double*) Calloc(markov_iter, double);
+  int* current_acc = (int*) R_Calloc(markov_iter, int);
+  double* current_scores = (double*) R_Calloc(markov_iter, double);
   int i, j, acc_sum, real_acc_sum;
   int total_iter = 0;
   int frozen = 0;
@@ -815,7 +815,7 @@ SEXP simulatedAnnealing_(SEXP X_train, SEXP y_train, SEXP max_vars_raw, SEXP max
   int allow_conj_removal = asLogical(allow_conj_removal_raw);
   int conjsize = asInteger(conjsize_raw);
 
-  int* disj2 = (int*) Calloc(n_conj * n_vars, int);
+  int* disj2 = (int*) R_Calloc(n_conj * n_vars, int);
   memcpy(disj2, INTEGER(disj), n_conj * n_vars * sizeof(int));
   int* min_conj = disj2;
 
@@ -825,7 +825,7 @@ SEXP simulatedAnnealing_(SEXP X_train, SEXP y_train, SEXP max_vars_raw, SEXP max
   sa_eval_t* eval;
 
   eval_models_list** models = NULL;
-  if(remember_models) models = (eval_models_list**) Calloc(PRIME, eval_models_list*);
+  if(remember_models) models = (eval_models_list**) R_Calloc(PRIME, eval_models_list*);
   prevented_evals = 0;
 
   while(t >= end_temp) {
@@ -836,18 +836,18 @@ SEXP simulatedAnnealing_(SEXP X_train, SEXP y_train, SEXP max_vars_raw, SEXP max
     for(i = 0; i < markov_iter; i++) {
       eval = simulatedAnnealingStep(X_train, y_train, max_vars, max_conj, Z_train, Z_val, disj2, n_conj, n_vars, t, acc_type, current_score, nodesize, split_criterion, alpha, cp, smoothing, mtry, covariable_mode, scoring_rule, gamma, X_val, y_val, use_validation, y_bin, allow_conj_removal, conjsize, X, models);
       if(!protect_min_conj)
-        Free(disj2);
+        R_Free(disj2);
       else
         protect_min_conj = 0;
       disj2 = eval->disj;
       current_score = eval->score;
       current_acc[i] = eval->acc;
-      Free(eval);
+      R_Free(eval);
 
       current_scores[i] = current_score;
 
       if (current_score <= min_score) {
-        Free(min_conj);
+        R_Free(min_conj);
         min_score = current_score;
         min_conj = disj2;
         protect_min_conj = 1;
@@ -904,10 +904,10 @@ SEXP simulatedAnnealing_(SEXP X_train, SEXP y_train, SEXP max_vars_raw, SEXP max
   destroy_eval_models(models);
 
   if(!protect_min_conj)
-    Free(disj2);
+    R_Free(disj2);
 
-  Free(current_acc);
-  Free(current_scores);
+  R_Free(current_acc);
+  R_Free(current_scores);
 
   SEXP ret_obj = PROTECT(allocVector(VECSXP, 4));
   SEXP min_conj_R = PROTECT(allocMatrix(INTSXP, n_conj, n_vars));
@@ -917,7 +917,7 @@ SEXP simulatedAnnealing_(SEXP X_train, SEXP y_train, SEXP max_vars_raw, SEXP max
   SET_VECTOR_ELT(ret_obj, 2, ScalarInteger(total_iter));
   SET_VECTOR_ELT(ret_obj, 3, ScalarInteger(prevented_evals));
 
-  Free(min_conj);
+  R_Free(min_conj);
   UNPROTECT(2);
   return ret_obj;
 }
@@ -925,9 +925,9 @@ SEXP simulatedAnnealing_(SEXP X_train, SEXP y_train, SEXP max_vars_raw, SEXP max
 gs_eval_t* greedyStep(SEXP X_train, SEXP y_train, int max_vars, int max_conj, SEXP Z_train, SEXP Z_val, int* disj, int n_conj_raw, int n_vars_raw, double score, int mtry_greedy, int greedy_mod, int greedy_rem, int nodesize, int split_criterion, double alpha, double cp, int smoothing, int mtry, int covariable_mode, int scoring_rule, double gamma, SEXP X_val, SEXP y_val, int use_validation, int y_bin, int allow_conj_removal, int conjsize, SEXP X) {
   int p = ncols(VECTOR_ELT(X_train, 0));
 
-  int* disj2 = (int*) Calloc(n_conj_raw * n_vars_raw, int);
+  int* disj2 = (int*) R_Calloc(n_conj_raw * n_vars_raw, int);
   memcpy(disj2, disj, n_conj_raw * n_vars_raw * sizeof(int));
-  int* min_conj = (int*) Calloc(n_conj_raw * n_vars_raw, int);
+  int* min_conj = (int*) R_Calloc(n_conj_raw * n_vars_raw, int);
   memcpy(min_conj, disj, n_conj_raw * n_vars_raw * sizeof(int));
 
   int n_conj;
@@ -935,7 +935,7 @@ gs_eval_t* greedyStep(SEXP X_train, SEXP y_train, int max_vars, int max_conj, SE
     if(disj2[n_conj] == NA_INTEGER)
       break;
   }
-  int* n_vars = (int*) Calloc(n_conj, int);
+  int* n_vars = (int*) R_Calloc(n_conj, int);
   int n_vars_total = 0;
   int i, j, k, l;
   for(i = 0; i < n_conj; i++) {
@@ -1001,11 +1001,11 @@ gs_eval_t* greedyStep(SEXP X_train, SEXP y_train, int max_vars, int max_conj, SE
     }
   }
 
-  int* unused_vars = (int*) Calloc(p, int);
-  int* available_vars = (int*) Calloc(2 * p, int);
+  int* unused_vars = (int*) R_Calloc(p, int);
+  int* available_vars = (int*) R_Calloc(2 * p, int);
   int n_free_vars;
 
-  int* sub_disj = (int*) Calloc(n_vars_raw, int);
+  int* sub_disj = (int*) R_Calloc(n_vars_raw, int);
   int* dm;
   int conjsum;
 
@@ -1044,7 +1044,7 @@ gs_eval_t* greedyStep(SEXP X_train, SEXP y_train, int max_vars, int max_conj, SE
         for(k = 0; k < nrows(X); k++) {
           conjsum += dm[k];
         }
-        Free(dm);
+        R_Free(dm);
         if (conjsum < conjsize || conjsum > nrows(X) - conjsize) {
           continue;
         }
@@ -1104,7 +1104,7 @@ gs_eval_t* greedyStep(SEXP X_train, SEXP y_train, int max_vars, int max_conj, SE
           for(k = 0; k < nrows(X); k++) {
             conjsum += dm[k];
           }
-          Free(dm);
+          R_Free(dm);
           if (conjsum < conjsize || conjsum > nrows(X) - conjsize) {
             continue;
           }
@@ -1125,13 +1125,13 @@ gs_eval_t* greedyStep(SEXP X_train, SEXP y_train, int max_vars, int max_conj, SE
   if(mtry_greedy)
     PutRNGstate();
 
-  Free(disj2);
-  Free(n_vars);
-  Free(unused_vars);
-  Free(available_vars);
-  Free(sub_disj);
+  R_Free(disj2);
+  R_Free(n_vars);
+  R_Free(unused_vars);
+  R_Free(available_vars);
+  R_Free(sub_disj);
 
-  gs_eval_t* eval = (gs_eval_t*) Calloc(1, gs_eval_t);
+  gs_eval_t* eval = (gs_eval_t*) R_Calloc(1, gs_eval_t);
   eval->disj = min_conj;
   eval->score = min_score;
   eval->iter = iter;
@@ -1160,15 +1160,15 @@ SEXP greedySearch_(SEXP X_train, SEXP y_train, SEXP max_vars_raw, SEXP max_conj_
   int allow_conj_removal = asLogical(allow_conj_removal_raw);
   int conjsize = asInteger(conjsize_raw);
   int* disj = INTEGER(disj_raw);
-  int* min_conj = (int*) Calloc(n_conj * n_vars, int);
+  int* min_conj = (int*) R_Calloc(n_conj * n_vars, int);
   memcpy(min_conj, disj, n_conj * n_vars * sizeof(int));
 
   int mtry_greedy = asLogical(mtry_greedy_raw);
   if(mtry_greedy) {
     int p = ncols(VECTOR_ELT(X_train, 0));
     int max_mtry_vars = max_conj * 2 * max_vars * p;
-    mtry_vars_raw = (int*) Calloc(max_mtry_vars, int);
-    mtry_vars = (int*) Calloc(max_mtry_vars, int);
+    mtry_vars_raw = (int*) R_Calloc(max_mtry_vars, int);
+    mtry_vars = (int*) R_Calloc(max_mtry_vars, int);
     for(int i = 0; i < max_mtry_vars; i++)
       mtry_vars_raw[i] = i;
   }
@@ -1183,20 +1183,20 @@ SEXP greedySearch_(SEXP X_train, SEXP y_train, SEXP max_vars_raw, SEXP max_conj_
     // if (eval->score >= min_score) {
     // if (doubleEquals(min_score, eval->score) || eval->score > min_score) {
     if (eval->move_type == -1) {
-      Free(eval->disj);
-      Free(eval);
+      R_Free(eval->disj);
+      R_Free(eval);
       break;
     }
-    Free(min_conj);
+    R_Free(min_conj);
     min_conj = eval->disj;
     min_score = eval->score;
     move_counts[eval->move_type]++;
-    Free(eval);
+    R_Free(eval);
   }
 
   if(mtry_greedy) {
-    Free(mtry_vars_raw);
-    Free(mtry_vars);
+    R_Free(mtry_vars_raw);
+    R_Free(mtry_vars);
   }
 
   SEXP ret_obj = PROTECT(allocVector(VECSXP, 4));
@@ -1209,7 +1209,7 @@ SEXP greedySearch_(SEXP X_train, SEXP y_train, SEXP max_vars_raw, SEXP max_conj_
   memcpy(INTEGER(move_counts_R), move_counts, 5 * sizeof(int));
   SET_VECTOR_ELT(ret_obj, 3, move_counts_R);
 
-  Free(min_conj);
+  R_Free(min_conj);
   UNPROTECT(3);
   return ret_obj;
 }
@@ -1273,11 +1273,11 @@ void destroy_eval_models(eval_models_list** models) {
     while(next != NULL) {
       current = next;
       next = next->next;
-      Free(current->disj);
-      Free(current);
+      R_Free(current->disj);
+      R_Free(current);
     }
   }
-  Free(models);
+  R_Free(models);
 }
 
 int drawNumberWithReplacement(int total, int iter, int random) {

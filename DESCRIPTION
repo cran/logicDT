@@ -1,7 +1,7 @@
 Package: logicDT
 Type: Package
 Title: Identifying Interactions Between Binary Predictors
-Version: 1.0.4
+Version: 1.0.5
 Authors@R: person("Michael", "Lau", email = "michael.lau@hhu.de",
   role = c("aut", "cre"), comment = c(ORCID = "0000-0002-5327-8351"))
 Description: A statistical learning method that tries to find the best set
@@ -18,8 +18,8 @@ Encoding: UTF-8
 Imports: glmnet, graphics, stats, utils
 RoxygenNote: 7.1.2
 NeedsCompilation: yes
-Packaged: 2024-01-19 12:47:24 UTC; Lau
+Packaged: 2024-09-23 13:12:36 UTC; Michael
 Author: Michael Lau [aut, cre] (<https://orcid.org/0000-0002-5327-8351>)
 Maintainer: Michael Lau <michael.lau@hhu.de>
 Repository: CRAN
-Date/Publication: 2024-01-19 13:10:02 UTC
+Date/Publication: 2024-09-23 13:30:34 UTC

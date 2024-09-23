@@ -30,7 +30,7 @@ SEXP prune_(SEXP pet, SEXP y_raw, SEXP Z_raw) {
   int covariable_mode = asInteger(VECTOR_ELT(pet, 8));
   if(covariable_mode >= 2) {
     functional** model_list = functionalLeaves(tree, number_of_nodes, bin_y, quant_y, y_bin, Z, covariable_mode, 0, 1);
-    Free(model_list);
+    R_Free(model_list);
   }
 
   linked_list2* prune_list = prune(tree);
@@ -131,7 +131,7 @@ SEXP prune_(SEXP pet, SEXP y_raw, SEXP Z_raw) {
     }
     buffer = current_list_item;
     current_list_item = current_list_item->next;
-    Free(buffer);
+    R_Free(buffer);
   }
   stack_destroy(stack);
   UNPROTECT(1);
@@ -177,7 +177,7 @@ linked_list2* prune(node* tree) {
       }
     }
     makeInnerNode(removed_inner_node);
-    current_list_item->next = (linked_list2*) Calloc(1, linked_list2);
+    current_list_item->next = (linked_list2*) R_Calloc(1, linked_list2);
     current_list_item = current_list_item->next;
     current_list_item->alpha = min_g;
     current_list_item->tree = new_tree;
@@ -251,7 +251,7 @@ linked_list2* pre_prune(node* tree) {
   double imp_decrease;
   int pruned_nodes = 1;
 
-  linked_list2* prune_list = (linked_list2*) Calloc(1, linked_list2);
+  linked_list2* prune_list = (linked_list2*) R_Calloc(1, linked_list2);
   linked_list2* current_list_item = prune_list;
   current_list_item->alpha = 0;
   current_list_item->tree = copyTree(tree);
@@ -267,7 +267,7 @@ linked_list2* pre_prune(node* tree) {
       if(current_node->left->leaf && current_node->right->leaf) {
         imp_decrease = impurity_decrease(current_node->impurity, current_node->left->impurity, current_node->right->impurity, (double) (current_node->left->N_k)/(current_node->N_k));
         if(fabs(imp_decrease) <= 1e-7) {
-          current_list_item->next = (linked_list2*) Calloc(1, linked_list2);
+          current_list_item->next = (linked_list2*) R_Calloc(1, linked_list2);
           current_list_item = current_list_item->next;
           current_list_item->alpha = 0;
           current_list_item->tree = new_tree;
@@ -294,7 +294,7 @@ void makeInnerNode(node* current_node) {
 }
 
 node* copyTree(node* tree) {
-  node* new_tree = Calloc(1, node);
+  node* new_tree = R_Calloc(1, node);
   node* new_node = new_tree;
   node* current_node;
 
@@ -314,10 +314,10 @@ node* copyTree(node* tree) {
     new_node->pred = current_node->pred;
     new_node->ll = current_node->ll;
     new_node->impurity = current_node->impurity;
-    new_node->obs_ind = Calloc(new_node->N_k, int);
+    new_node->obs_ind = R_Calloc(new_node->N_k, int);
     memcpy(new_node->obs_ind, current_node->obs_ind, current_node->N_k * sizeof(int));
     if(current_node->func_pred != NULL) {
-      new_node->func_pred = Calloc(1, functional);
+      new_node->func_pred = R_Calloc(1, functional);
       new_node->func_pred->b = current_node->func_pred->b;
       new_node->func_pred->c = current_node->func_pred->c;
       new_node->func_pred->d = current_node->func_pred->d;
@@ -327,7 +327,7 @@ node* copyTree(node* tree) {
     }
 
     if(!(current_node->leaf)) {
-      new_node->left = Calloc(1, node); new_node->right = Calloc(1, node);
+      new_node->left = R_Calloc(1, node); new_node->right = R_Calloc(1, node);
       stack_push(stack_old, current_node->right);
       stack_push(stack_old, current_node->left);
       stack_push(stack_new2, new_node->right);

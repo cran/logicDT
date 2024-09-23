@@ -108,7 +108,7 @@ void numericalGrad2(int n, double* par, double* gr, void* ex2) {
 
   memset(gr, 0, n * sizeof(double));
   optimfn* fn = data->fn;
-  double* par_copy = (double*) Calloc(n, double);
+  double* par_copy = (double*) R_Calloc(n, double);
   memcpy(par_copy, par, n * sizeof(double));
   double h = 6.055454e-06; // Cube-root of machine epsilon 2.220446e-16
   double buf;
@@ -120,7 +120,7 @@ void numericalGrad2(int n, double* par, double* gr, void* ex2) {
     gr[i] = (buf - fn(n, par_copy, ex2))/(2.0 * h);
     par_copy[i] = par[i];
   }
-  Free(par_copy);
+  R_Free(par_copy);
   for(int i = 0; i < n; i++) gr[i] *= par_scale[i];
 }
 
@@ -207,7 +207,7 @@ SEXP fit4plModelWithGroups_(SEXP y, SEXP Z, SEXP G) {
     if(G2[i] > n_groups) n_groups = G2[i];
   }
   n_groups++;
-  int* obs_ind = (int*) Calloc(N, int);
+  int* obs_ind = (int*) R_Calloc(N, int);
   if(isInteger(y)) {
     bin_y = INTEGER(y);
     y_bin = 1;
@@ -239,10 +239,10 @@ SEXP fit4plModelWithGroups_(SEXP y, SEXP Z, SEXP G) {
   model_pointer[3] = fpl->e;
   double* beta = REAL(beta_R);
   for(int i = 0; i < n_groups - 1; i++) beta[i] = (model->beta)[i];
-  Free(obs_ind);
-  Free(model->fpl);
-  Free(model->beta);
-  Free(model);
+  R_Free(obs_ind);
+  R_Free(model->fpl);
+  R_Free(model->beta);
+  R_Free(model);
   // Assign class "4pl.grouped"
   classgets(model_R, mkString("4pl.grouped"));
   UNPROTECT(1);
@@ -253,9 +253,9 @@ functional_grouped* fit4plModelWithGroups(int* bin_y, double* quant_y, int y_bin
   optimfn* fn;
   optimgr* gr;
 
-  functional_grouped* ret = (functional_grouped*) Calloc(1, functional_grouped);
+  functional_grouped* ret = (functional_grouped*) R_Calloc(1, functional_grouped);
   ret->n_groups = n_groups;
-  double* beta = (double*) Calloc(n_groups, double);
+  double* beta = (double*) R_Calloc(n_groups, double);
   ret->beta = beta;
   memset(beta, 0, n_groups * sizeof(double));
 
@@ -265,13 +265,13 @@ functional_grouped* fit4plModelWithGroups(int* bin_y, double* quant_y, int y_bin
     return ret;
   }
 
-  functional* fpl = (functional*) Calloc(1, functional);
+  functional* fpl = (functional*) R_Calloc(1, functional);
   fpl->y_bin = y_bin;
   ret->fpl = fpl;
 
   // Get group means
   // Assume, G is coded as 0, ..., n_groups - 1
-  int* group_counts = (int*) Calloc(n_groups, int);
+  int* group_counts = (int*) R_Calloc(n_groups, int);
   memset(group_counts, 0, n_groups * sizeof(int));
   int current_group;
   for(int i = 0; i < N; i++) {
@@ -300,13 +300,13 @@ functional_grouped* fit4plModelWithGroups(int* bin_y, double* quant_y, int y_bin
 
   int n_params = 4 + n_groups - 1;
   // Scale parameters
-  double* Pars = (double*) Calloc(n_params, double);
+  double* Pars = (double*) R_Calloc(n_params, double);
   Pars[0] = initModel->b;
   Pars[1] = initModel->c;
   Pars[2] = initModel->d;
   Pars[3] = initModel->e;
   for(int j = 0; j < n_groups - 1; j++) Pars[j + 4] = beta[j];
-  double* par_scale = (double*) Calloc(n_params, double);
+  double* par_scale = (double*) R_Calloc(n_params, double);
   memcpy(par_scale, Pars, n_params * sizeof(double));
   for(int i = 0; i < n_params; i++) {
     par_scale[i] = fabs(par_scale[i]);
@@ -316,12 +316,12 @@ functional_grouped* fit4plModelWithGroups(int* bin_y, double* quant_y, int y_bin
   double min_val = 0;
   int maxit = 500; // Standard value 100
   int trace = 0;
-  int* mask = (int*) Calloc(n_params, int);
+  int* mask = (int*) R_Calloc(n_params, int);
 	for (int i = 0; i < n_params; i++) mask[i] = 1;
   double abstol = R_NegInf;
   double reltol = 1e-7; // Standard value 1.490116e-08
   int nREPORT = 10;
-  dataset* ex = (dataset*) Calloc(1, dataset);
+  dataset* ex = (dataset*) R_Calloc(1, dataset);
   ex->bin_y = bin_y;
   ex->quant_y = quant_y;
   ex->Z = Z;
@@ -329,7 +329,7 @@ functional_grouped* fit4plModelWithGroups(int* bin_y, double* quant_y, int y_bin
   ex->N = N;
   ex->par_scale = par_scale;
   ex->fn = fn; // For alternative numerical derivatives
-  dataset_grouped* ex2 = (dataset_grouped*) Calloc(1, dataset_grouped);
+  dataset_grouped* ex2 = (dataset_grouped*) R_Calloc(1, dataset_grouped);
   ex2->data = ex;
   ex2->G = G;
   ex2->n_groups = n_groups;
@@ -355,13 +355,13 @@ functional_grouped* fit4plModelWithGroups(int* bin_y, double* quant_y, int y_bin
 
     for(int i = 0; i < n_groups - 1; i++) beta[i] = Pars[4 + i] * par_scale[4 + i];
   }
-  Free(Pars);
-  Free(par_scale);
-  Free(mask);
-  Free(ex);
-  Free(ex2);
-  Free(initModel);
-  Free(group_counts);
+  R_Free(Pars);
+  R_Free(par_scale);
+  R_Free(mask);
+  R_Free(ex);
+  R_Free(ex2);
+  R_Free(initModel);
+  R_Free(group_counts);
   return ret;
 }
 
